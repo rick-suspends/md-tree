@@ -1,0 +1,45 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; padding: 0; }
+body { overflow: hidden; }
+
+/* Syntax highlighting in preview */
+.hljs { background: #282c34; color: #abb2bf; padding: 1em; border-radius: 4px; overflow-x: auto; }
+
+/* Overlay panel */
+.overlay-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 65vw;
+  height: 100%;
+  transform: translateX(100%);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+}
+
+.overlay-panel--open {
+  transform: translateX(0);
+}
+
+.overlay-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  z-index: 11;
+  cursor: pointer;
+  color: #888;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.overlay-close-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
