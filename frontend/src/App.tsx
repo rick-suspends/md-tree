@@ -29,6 +29,9 @@ export default function App() {
   const [overlayType, setOverlayType] = useState<OverlayType>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  type UndoEntry = { snapshot: CollectionStructure; movedPath: string | null };
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  const [undoPath, setUndoPath] = useState<string | null>(null);
 
   const editorContentRef = useRef(editorContent);
   const savedContentRef = useRef(savedContent);
@@ -74,6 +77,9 @@ export default function App() {
     setOverlayType(null);
     setCollection({ root: [] });
     setOrphans([]);
+    setUndoStack([]);
+    setUndoPath(null);
+
     await loadCollection(name);
   }, [loadCollection]);
 
@@ -157,15 +163,42 @@ export default function App() {
     setCollection(prev => ({ root: updateTitle(prev.root) }));
   }, []);
 
-  const handleCollectionChange = useCallback(async (c: CollectionStructure) => {
+  const handleCollectionChange = useCallback(async (c: CollectionStructure, changedPath?: string) => {
     if (!currentProject) return;
+    setUndoStack(prev => [...prev.slice(-19), { snapshot: collection, movedPath: changedPath ?? null }]);
+    setUndoPath(changedPath ?? null);
     setCollection(c);
     try {
       await saveCollection(currentProject, c);
       const o = await fetchOrphans(currentProject);
       setOrphans(o);
     } catch {}
-  }, [currentProject]);
+  }, [currentProject, collection]);
+
+  const handleUndo = useCallback(async () => {
+    if (!currentProject || undoStack.length === 0) return;
+    const entry = undoStack[undoStack.length - 1];
+    const newStack = undoStack.slice(0, -1);
+    setUndoStack(newStack);
+    setUndoPath(newStack.length > 0 ? newStack[newStack.length - 1].movedPath : null);
+    setCollection(entry.snapshot);
+    try {
+      await saveCollection(currentProject, prev);
+      const o = await fetchOrphans(currentProject);
+      setOrphans(o);
+    } catch {}
+  }, [currentProject, undoStack]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [handleUndo]);
 
   const handleCreateFile = useCallback(async (filename: string) => {
     if (!currentProject) return;
@@ -216,6 +249,13 @@ export default function App() {
     await loadCollection(currentProject);
   }, [currentProject, selectedPath, loadCollection]);
 
+  const handleRefresh = useCallback(async () => {
+    if (!currentProject) return;
+    const ps = await listProjects();
+    setProjects(ps);
+    await loadCollection(currentProject);
+  }, [currentProject, loadCollection]);
+
   const overlayOpen = overlayType !== null;
 
   if (loading) {
@@ -250,6 +290,10 @@ export default function App() {
           onDeleteProject={handleDeleteProject}
           onRenameProject={handleRenameProject}
           onOpenProjectMd={handleOpenProjectMd}
+          onRefresh={handleRefresh}
+          onUndo={handleUndo}
+          canUndo={undoStack.length > 0}
+          undoPath={undoPath}
         />
       </div>
 

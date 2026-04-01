@@ -160,7 +160,7 @@ function OrphanItem({ path, title, titleMode, selectedPath, onSelect, onOpen, on
   const mi: CSSProperties = { padding: "7px 14px", fontSize: "13px", cursor: "pointer", color: "#1a1a1a", whiteSpace: "nowrap" };
 
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1, margin: `${GAP}px 0` }}>
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1, margin: `${GAP}px 0` }}>
       <div style={{ position: "relative", display: "inline-block" }}>
         <div
           style={{
@@ -222,9 +222,12 @@ interface ItemProps {
   overId: string | null;
   activeId: string | null;
   dragDeltaX: number;
+  undoPath: string | null;
+  onUndo: () => void;
+  canUndo: boolean;
 }
 
-function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode, onSelect, onOpen, onDelete, onRename, onCreateChild, expanded, toggleExpand, overId, activeId, dragDeltaX }: ItemProps) {
+function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode, onSelect, onOpen, onDelete, onRename, onCreateChild, expanded, toggleExpand, overId, activeId, dragDeltaX, undoPath, onUndo, canUndo }: ItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.path });
   const [renaming, setRenaming] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -260,7 +263,7 @@ function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode,
   const mi: CSSProperties = { padding: "7px 14px", fontSize: "13px", cursor: "pointer", color: "#1a1a1a", whiteSpace: "nowrap" };
 
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1, margin: `${GAP}px 0` }}>
+    <div ref={setNodeRef} style={{ transform: (isDragging || depth > 1) ? undefined : CSS.Transform.toString(transform), transition: (isDragging || depth > 1) ? undefined : transition, opacity: isDragging ? 0 : 1, margin: `${GAP}px 0` }}>
       <div style={{ display: "flex", alignItems: "stretch" }}>
         <ConnectorLines depth={depth} ancestors={ancestors} isLast={isLast} />
         <div style={{ minWidth: 0, position: "relative" }}>
@@ -309,6 +312,13 @@ function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode,
                 </span>
               )}
               {dropAction === "nest" && <span style={{ fontSize: "10px", color: "#4caf50", flexShrink: 0 }}>nest ▸</span>}
+              {canUndo && undoPath === node.path && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); onUndo(); }}
+                  title="Undo (Ctrl+Z)"
+                  style={{ flexShrink: 0, cursor: "pointer", fontSize: "14px", color: isSelected ? "rgba(255,255,255,0.85)" : "#888", padding: "0 2px", lineHeight: 1 }}
+                >↩</span>
+              )}
               {/* ⋮ menu button */}
               <span
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(o => !o); }}
@@ -357,29 +367,30 @@ function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode,
       </div>
       {/* Children */}
       {hasChildren && isExpanded && (
-        <SortableContext items={flatIds(node.children ?? [])} strategy={verticalListSortingStrategy}>
-          {(node.children ?? []).map((child, cidx) => (
-            <SortableItem
-              key={child.path}
-              node={child}
-              depth={depth + 1}
-              isLast={cidx === (node.children ?? []).length - 1}
-              ancestors={[...ancestors, !isLast]}
-              selectedPath={selectedPath}
-              titleMode={titleMode}
-              onSelect={onSelect}
-              onOpen={onOpen}
-              onDelete={onDelete}
-              onRename={onRename}
-              onCreateChild={onCreateChild}
-              expanded={expanded}
-              toggleExpand={toggleExpand}
-              overId={overId}
-              activeId={activeId}
-              dragDeltaX={dragDeltaX}
-            />
-          ))}
-        </SortableContext>
+        (node.children ?? []).map((child, cidx) => (
+          <SortableItem
+            key={child.path}
+            node={child}
+            depth={depth + 1}
+            isLast={cidx === (node.children ?? []).length - 1}
+            ancestors={[...ancestors, !isLast]}
+            selectedPath={selectedPath}
+            titleMode={titleMode}
+            onSelect={onSelect}
+            onOpen={onOpen}
+            onDelete={onDelete}
+            onRename={onRename}
+            onCreateChild={onCreateChild}
+            expanded={expanded}
+            toggleExpand={toggleExpand}
+            overId={overId}
+            activeId={activeId}
+            dragDeltaX={dragDeltaX}
+            undoPath={undoPath}
+            onUndo={onUndo}
+            canUndo={canUndo}
+          />
+        ))
       )}
     </div>
   );
@@ -408,14 +419,19 @@ interface SidebarProps {
   onDeleteProject: (name: string) => Promise<void>;
   onRenameProject: (oldName: string, newName: string) => Promise<void>;
   onOpenProjectMd: () => void;
+  onRefresh: () => Promise<void>;
+  onUndo: () => void;
+  canUndo: boolean;
+  undoPath: string | null;
 }
 
-export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onCreateChildFile, onOpenYaml, yamlOpen, orphans, currentProject, currentProjectTitle, projects, onSwitchProject, onCreateProject, onDeleteProject, onRenameProject, onOpenProjectMd }: SidebarProps) {
+export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onCreateChildFile, onOpenYaml, yamlOpen, orphans, currentProject, currentProjectTitle, projects, onSwitchProject, onCreateProject, onDeleteProject, onRenameProject, onOpenProjectMd, onRefresh, onUndo, canUndo, undoPath }: SidebarProps) {
   const [titleMode, setTitleMode] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(flatIds(collection.root)));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [dragDeltaX, setDragDeltaX] = useState(0);
+  const prevMoveRef = useRef<{ overId: string | null; zone: string }>({ overId: null, zone: "" });
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
   const [createError, setCreateError] = useState("");
@@ -489,34 +505,55 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
     if (e.key === "ArrowDown") { const nr = swapSiblings(root, selectedPath, "down"); if (nr !== root) onCollectionChange({ root: reorder(nr) }); }
   }, [selectedPath, collection, expanded, onCollectionChange, setExpanded]);
 
-  function handleDragStart(event: DragStartEvent) { setActiveId(event.active.id as string); setDragDeltaX(0); }
-  function handleDragMove(event: DragMoveEvent) { setOverId(event.over?.id as string ?? null); setDragDeltaX(event.delta.x); }
+  function computeNewRoot(dragged: string, target: string, deltaX: number): FileNode[] | null {
+    if (orphans.some(o => o.path === target)) return null;
+    const isOrphan = orphans.some(o => o.path === dragged);
+    const orphanInfo = isOrphan ? orphans.find(o => o.path === dragged) : null;
+    const withoutDragged = isOrphan ? collection.root : removeNode(collection.root, dragged)[0];
+    const draggedNode: FileNode | null = isOrphan && orphanInfo
+      ? { path: orphanInfo.path, title: orphanInfo.title, order: 0, children: [] }
+      : removeNode(collection.root, dragged)[1];
+    if (!draggedNode) return null;
+    if (deltaX > 30) return reorder(insertAsChild(withoutDragged, target, draggedNode));
+    if (deltaX < -30) return reorder([...withoutDragged, draggedNode]);
+    return reorder(insertAfter(withoutDragged, target, draggedNode));
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string);
+    setDragDeltaX(0);
+    prevMoveRef.current = { overId: null, zone: "" };
+  }
+  function handleDragMove(event: DragMoveEvent) {
+    const newOverId = event.over?.id as string ?? null;
+    const newZone = event.delta.x > 30 ? "nest" : event.delta.x < -30 ? "unnest" : "sibling";
+    setOverId(newOverId);
+    const prev = prevMoveRef.current;
+    if (newOverId === prev.overId && newZone === prev.zone) return;
+    prevMoveRef.current = { overId: newOverId, zone: newZone };
+    setDragDeltaX(event.delta.x);
+  }
   function handleDragOver(event: DragOverEvent) { setOverId(event.over?.id as string ?? null); }
   function handleDragEnd(event: DragEndEvent) {
-    setActiveId(null); setOverId(null); setDragDeltaX(0);
     const { active, over, delta } = event;
+    setActiveId(null); setOverId(null); setDragDeltaX(0);
     if (!over || active.id === over.id) return;
     const dragged = active.id as string;
     const target = over.id as string;
-    const isOrphan = orphans.some(o => o.path === dragged);
-    const orphanInfo = isOrphan ? orphans.find(o => o.path === dragged) : null;
-    const getOrBuildNode = (): FileNode | null => {
-      if (isOrphan && orphanInfo) return { path: orphanInfo.path, title: orphanInfo.title, order: 0, children: [] };
-      const [, node] = removeNode(collection.root, dragged);
-      return node;
-    };
-    const withoutDragged = isOrphan ? collection.root : removeNode(collection.root, dragged)[0];
-    const draggedNode = getOrBuildNode();
-    if (!draggedNode) return;
-    if (orphans.some(o => o.path === target)) return;
-    let newNodes: FileNode[];
-    if (delta.x > 30) { newNodes = insertAsChild(withoutDragged, target, draggedNode); setExpanded(prev => { const s = new Set(prev); s.add(target); return s; }); }
-    else if (delta.x < -30) { newNodes = [...withoutDragged, draggedNode]; }
-    else { newNodes = insertAfter(withoutDragged, target, draggedNode); }
-    onCollectionChange({ root: reorder(newNodes) });
+    const newNodes = computeNewRoot(dragged, target, delta.x);
+    if (!newNodes) return;
+    if (delta.x > 30) setExpanded(prev => { const s = new Set(prev); s.add(target); return s; });
+    onCollectionChange({ root: newNodes }, dragged);
   }
 
   const allIds = [...flatIds(collection.root), ...orphans.map(o => o.path)];
+
+  const activeLabel = activeId ? (() => {
+    const orphan = orphans.find(o => o.path === activeId);
+    if (orphan) return titleMode ? orphan.title : orphan.path;
+    const [, node] = removeNode(collection.root, activeId);
+    return node ? (titleMode ? node.title : node.path) : activeId;
+  })() : "";
 
   // ── Project rename ────────────────────────────────────────────────────────
   const [renamingProject, setRenamingProject] = useState(false);
@@ -620,6 +657,14 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                       {titleMode ? currentProjectTitle : currentProject}
                     </span>
                   )}
+                  {/* ↻ refresh button */}
+                  <span
+                    onClick={onRefresh}
+                    title="Refresh projects and files from disk"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", borderRadius: "4px", cursor: "pointer", fontSize: "16px", color: "rgba(255,255,255,0.65)", flexShrink: 0 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
+                  >↻</span>
                   {/* ⋮ button — position:relative so dropdown anchors to its center */}
                   <span ref={menuRef} style={{ position: "relative", flexShrink: 0 }}>
                     <span
@@ -753,6 +798,9 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                 overId={overId}
                 activeId={activeId}
                 dragDeltaX={dragDeltaX}
+                undoPath={undoPath}
+                onUndo={onUndo}
+                canUndo={canUndo}
               />
             ))}
 
@@ -774,10 +822,19 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
               </div>
             )}
           </SortableContext>
-          <DragOverlay>
+          <DragOverlay dropAnimation={{ duration: 150, easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)" }}>
             {activeId ? (
-              <div style={{ background: "#ff8c00", padding: "5px 12px", borderRadius: "6px", border: "1.5px solid #ff8c00", color: "#fff", fontSize: "15px", fontWeight: 500, opacity: 0.9 }}>
-                {activeId}
+              <div style={{
+                display: "inline-flex", alignItems: "stretch",
+                width: "2.5in", borderRadius: "6px",
+                border: "1.5px solid #ff8c00", background: "#fff",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.22)",
+                opacity: 0.97, userSelect: "none",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", padding: "10px 6px 10px 8px", flexShrink: 0, background: "#ff8c00", color: "#fff", fontSize: "16px", fontWeight: "bold", borderRadius: "4px 0 0 4px", cursor: "grabbing" }}>⠿</div>
+                <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, padding: "10px 6px 10px 3px" }}>
+                  <span style={{ fontSize: "15px", fontWeight: 500, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeLabel}</span>
+                </div>
               </div>
             ) : null}
           </DragOverlay>
