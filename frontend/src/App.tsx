@@ -112,7 +112,7 @@ export default function App() {
     }
   }, [handleSwitchProject]);
 
-  const handleHighlight = useCallback((path: string) => {
+  const handleHighlight = useCallback((path: string | null) => {
     setSelectedPath(path);
   }, []);
 

@@ -2,28 +2,28 @@ root:
 - path: 01-introduction.md
   title: Introduction
   order: 0
-  children:
-  - path: 02-chapter-one.md
-    title: Chapter One
-    order: 0
-    children:
-    - path: 02a-chapter-one-part-a.md
-      title: Chapter One - Part A
-      order: 0
-      children:
-      - path: 04-epilogue.md
-        title: 04 Epilogue
-        order: 0
-        children: []
-- path: 03-conclusion.md
-  title: Conclusion
-  order: 1
   children: []
 - path: 05-fred.md
   title: 05 Fred and more to see if it updates
+  order: 1
+  children: []
+- path: 02-chapter-one.md
+  title: Chapter One
   order: 2
   children:
+  - path: 02a-chapter-one-part-a.md
+    title: Chapter One - Part A
+    order: 0
+    children:
+    - path: 04-epilogue.md
+      title: 04 Epilogue
+      order: 0
+      children: []
   - path: 06-sixth-toto-toto.md
     title: 06 Sixth and longer to see if it moves the sidebar width.
-    order: 0
+    order: 1
     children: []
+- path: 03-conclusion.md
+  title: Conclusion
+  order: 3
+  children: []

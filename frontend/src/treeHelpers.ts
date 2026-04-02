@@ -39,6 +39,19 @@ export function removeNode(nodes: FileNode[], path: string): [FileNode[], FileNo
   return [result, removed];
 }
 
+export function insertBefore(nodes: FileNode[], beforePath: string, node: FileNode): FileNode[] {
+  const idx = nodes.findIndex((n) => n.path === beforePath);
+  if (idx !== -1) {
+    const copy = [...nodes];
+    copy.splice(idx, 0, { ...node, order: idx });
+    return copy.map((n, i) => ({ ...n, order: i }));
+  }
+  return nodes.map((n) => ({
+    ...n,
+    children: n.children ? insertBefore(n.children, beforePath, node) : n.children,
+  }));
+}
+
 export function insertAfter(nodes: FileNode[], afterPath: string, node: FileNode): FileNode[] {
   const idx = nodes.findIndex((n) => n.path === afterPath);
   if (idx !== -1) {
