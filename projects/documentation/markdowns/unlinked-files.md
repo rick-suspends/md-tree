@@ -9,7 +9,7 @@ The blue **Unlinked** chip sits in the right column, parallel to the project chi
 - **Gray** — no unlinked files
 - **Orange** — one or more files are waiting to be linked
 
-The pane expands automatically when new unlinked files appear.
+The pane is open by default. Click the chip to collapse it, and again to reopen it.
 
 ## Adding files to the hierarchy
 
