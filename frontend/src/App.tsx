@@ -178,12 +178,12 @@ export default function App() {
   const handleUndo = useCallback(async () => {
     if (!currentProject || undoStack.length === 0) return;
     const entry = undoStack[undoStack.length - 1];
-    const newStack = undoStack.slice(0, -1);
+    const newStack = [...undoStack.slice(0, -1), { snapshot: collection, movedPath: entry.movedPath }];
     setUndoStack(newStack);
-    setUndoPath(newStack.length > 0 ? newStack[newStack.length - 1].movedPath : null);
+    setUndoPath(entry.movedPath);
     setCollection(entry.snapshot);
     try {
-      await saveCollection(currentProject, prev);
+      await saveCollection(currentProject, entry.snapshot);
       const o = await fetchOrphans(currentProject);
       setOrphans(o);
     } catch {}
@@ -224,15 +224,13 @@ export default function App() {
   const handleCreateChildFile = useCallback(async (parentPath: string, filename: string) => {
     if (!currentProject) return;
     await createFile(currentProject, filename);
-    setCollection(prev => {
-      const [withoutNew, newNode] = removeNode(
-        [...prev.root, { path: filename, title: filename.replace(/\.md$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()), order: 0, children: [] }],
-        filename
-      );
-      if (!newNode) return prev;
-      return { root: reorder(insertAsChild(withoutNew, parentPath, newNode)) };
-    });
-    await loadCollection(currentProject);
+    const fresh = await fetchCollection(currentProject);
+    const [withoutNew, newNode] = removeNode(fresh.root, filename);
+    if (newNode) {
+      const newRoot = reorder(insertAsChild(withoutNew, parentPath, newNode));
+      await saveCollection(currentProject, { root: newRoot });
+      setCollection({ root: newRoot });
+    }
     const initContent = `# ${filename.replace(/\.md$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase())}\n`;
     setSelectedPath(filename);
     setEditorContent(initContent);

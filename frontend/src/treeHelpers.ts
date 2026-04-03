@@ -68,7 +68,7 @@ export function insertAfter(nodes: FileNode[], afterPath: string, node: FileNode
 export function insertAsChild(nodes: FileNode[], parentPath: string, node: FileNode): FileNode[] {
   return nodes.map((n) => {
     if (n.path === parentPath) {
-      const children = [...(n.children ?? []), { ...node, order: (n.children ?? []).length }];
+      const children = [{ ...node, order: 0 }, ...(n.children ?? [])];
       return { ...n, children };
     }
     if (n.children) return { ...n, children: insertAsChild(n.children, parentPath, node) };

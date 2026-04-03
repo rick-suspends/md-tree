@@ -107,7 +107,7 @@ def get_all_md_files(project: str) -> list[dict]:
     markdowns_dir = get_markdowns_dir(project)
     markdowns_dir.mkdir(parents=True, exist_ok=True)
     files = []
-    for path in sorted(markdowns_dir.rglob("*.md")):
+    for path in sorted(markdowns_dir.rglob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True):
         rel_path = str(path.relative_to(markdowns_dir))
         try:
             post = frontmatter.load(str(path))
