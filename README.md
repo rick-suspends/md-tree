@@ -4,7 +4,7 @@ A local markdown hierarchy manager for people who work with large collections of
 
 If you've ever maintained a documentation site and found yourself hand-editing a YAML nav file, a `sidebars.js`, or a custom sidebar config every time you added, renamed, or reorganized a page — this tool is for you.
 
-**.mdTree** gives you a visual, drag-and-drop interface for organizing markdown files into a hierarchy. The hierarchy is stored as a simple `collection.yaml` alongside your files, and can be exported directly to MkDocs or Docusaurus config format when you're ready to build your site.
+**.mdTree** gives you a visual, drag-and-drop interface for organizing markdown files into a hierarchy. The hierarchy is stored as a simple `tree.yaml` alongside your files, and can be exported directly to MkDocs or Docusaurus config format when you're ready to build your site.
 
 ## Features
 
@@ -17,7 +17,7 @@ If you've ever maintained a documentation site and found yourself hand-editing a
 
 ## How it works
 
-Files are organized within a project. Each project has a `markdowns/` folder for your `.md` files and a `collection.yaml` that records the hierarchy. You build and rearrange the tree in the UI; the YAML is maintained for you.
+Files are organized within a project. Each project has a `markdowns/` folder for your `.md` files and a `tree.yaml` that records the hierarchy. You build and rearrange the tree in the UI; the YAML is maintained for you.
 
 Files that exist in `markdowns/` but aren't placed in the hierarchy yet appear in the **Unlinked** pane. Drag them in, double-click them, or use the arrow key — they won't be forgotten.
 
