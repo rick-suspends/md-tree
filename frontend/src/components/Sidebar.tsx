@@ -91,7 +91,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onCreateChildFile, onOpenYaml, yamlOpen, orphans, currentProject, currentProjectTitle, projects, onSwitchProject, onCreateProject, onDeleteProject, onArchiveProject, onRenameProject, onOpenProjectMd, onRefresh, onImport, onExport }: SidebarProps) {
-  const [titleMode, setTitleMode] = useState(false);
+  const [titleMode, setTitleMode] = useState(true);
   const [orphanSort, setOrphanSort] = useState<"recent" | "alpha" | "custom">("recent");
   const [orphanOrder, setOrphanOrder] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(flatIds(collection.root)));
