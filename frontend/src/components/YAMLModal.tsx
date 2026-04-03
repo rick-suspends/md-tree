@@ -72,7 +72,7 @@ export default function YAMLModal({ viMode, onClose, onSaved }: Props) {
           gap: "10px",
         }}>
           <span style={{ color: "#ccc", fontSize: "13px", flex: 1, fontWeight: 500 }}>
-            Edit YAML — collection.yaml
+            Edit YAML — tree.yaml
           </span>
           <span style={{ color: "#666", fontSize: "11px" }}>Ctrl+S to save · Esc to close</span>
           <button

@@ -15,7 +15,11 @@ def get_markdowns_dir(project: str) -> Path:
     return PROJECTS_DIR / project / "markdowns"
 
 def get_collection_file(project: str) -> Path:
-    return PROJECTS_DIR / project / "collection.yaml"
+    tree = PROJECTS_DIR / project / "tree.yaml"
+    legacy = PROJECTS_DIR / project / "collection.yaml"
+    if not tree.exists() and legacy.exists():
+        legacy.rename(tree)
+    return tree
 
 def get_project_md_file(project: str) -> Path:
     return PROJECTS_DIR / project / "project.md"
@@ -55,7 +59,7 @@ def create_project(name: str):
     project_dir = PROJECTS_DIR / name
     project_dir.mkdir(parents=True, exist_ok=True)
     (project_dir / "markdowns").mkdir(exist_ok=True)
-    collection_file = project_dir / "collection.yaml"
+    collection_file = project_dir / "tree.yaml"
     if not collection_file.exists():
         with open(collection_file, "w") as f:
             yaml.dump({"root": []}, f, allow_unicode=True, sort_keys=False)
@@ -85,7 +89,7 @@ def migrate_legacy_data():
         shutil.move(str(old_markdowns), str(dest_markdowns))
 
     # Move collection.yaml
-    dest_collection = default_dir / "collection.yaml"
+    dest_collection = default_dir / "tree.yaml"
     if old_collection.exists() and not dest_collection.exists():
         shutil.move(str(old_collection), str(dest_collection))
 
