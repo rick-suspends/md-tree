@@ -18,3 +18,7 @@ export interface ProjectInfo {
   name: string;
   title: string;
 }
+
+export interface ProjectConfig {
+  markdowns_dir?: string;
+}

@@ -23,17 +23,29 @@ export async function renameProject(name: string, newName: string): Promise<{ ne
   return r.json();
 }
 
-export async function createProject(name: string): Promise<void> {
-  const r = await fetch(`${BASE}/projects/${name}`, { method: "POST" });
+export async function createProject(name: string, markdowns_dir?: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${name}`, {
+    method: "POST",
+    ...(markdowns_dir ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ markdowns_dir }) } : {}),
+  });
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
     throw new Error(err.detail ?? "Failed to create project");
   }
 }
 
+
 export async function deleteProject(name: string): Promise<void> {
   const r = await fetch(`${BASE}/projects/${name}`, { method: "DELETE" });
   if (!r.ok) throw new Error("Failed to delete project");
+}
+
+export async function archiveProject(name: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${name}/archive`, { method: "POST" });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.detail ?? "Failed to archive project");
+  }
 }
 
 export async function fetchProjectMd(project: string): Promise<string> {
@@ -143,11 +155,11 @@ export async function fetchOrphans(project: string): Promise<FileInfo[]> {
   return r.json();
 }
 
-export async function importFromFormat(project: string, format: string, content: string): Promise<{ warnings: string[]; node_count: number }> {
+export async function importFromFormat(project: string, format: string, options: { content?: string; directory?: string }): Promise<{ warnings: string[]; node_count: number }> {
   const r = await fetch(`${BASE}/projects/${project}/import/${format}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify(options),
   });
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));

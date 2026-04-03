@@ -8,34 +8,23 @@ interface Props {
   onImported: () => void;
 }
 
-const PLACEHOLDERS: Record<string, string> = {
-  mkdocs: `nav:
-  - Home: index.md
-  - Getting Started:
-    - Installation: install.md
-    - Configuration: config.md
-  - API Reference: api.md`,
-  docusaurus: `module.exports = {
-  docs: [
-    { type: 'doc', id: 'intro', label: 'Introduction' },
-    {
-      type: 'category',
-      label: 'Guides',
-      items: [
-        { type: 'doc', id: 'guides/install', label: 'Install' }
-      ]
-    }
-  ]
-};`,
+const FORMAT_LABELS: Record<string, string> = {
+  mkdocs: "MkDocs",
+  docusaurus: "Docusaurus",
 };
 
-const LABELS: Record<string, string> = {
-  mkdocs: "MkDocs (mkdocs.yml nav)",
-  docusaurus: "Docusaurus (sidebars.js)",
+const FORMAT_HINTS: Record<string, string> = {
+  mkdocs: "Path to your MkDocs project root (must contain mkdocs.yml)",
+  docusaurus: "Path to your Docusaurus project root (must contain sidebars.js)",
+};
+
+const FORMAT_PLACEHOLDERS: Record<string, string> = {
+  mkdocs: "/home/user/my-mkdocs-project",
+  docusaurus: "/home/user/my-docusaurus-project",
 };
 
 export default function ImportModal({ format, project, onClose, onImported }: Props) {
-  const [content, setContent] = useState("");
+  const [directory, setDirectory] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ warnings: string[]; node_count: number } | null>(null);
@@ -47,12 +36,12 @@ export default function ImportModal({ format, project, onClose, onImported }: Pr
   }, [onClose]);
 
   const handleImport = async () => {
-    if (!content.trim()) return;
+    if (!directory.trim()) return;
     setLoading(true);
     setError("");
     setResult(null);
     try {
-      const res = await importFromFormat(project, format, content);
+      const res = await importFromFormat(project, format, { directory: directory.trim() });
       setResult(res);
       if (res.warnings.length === 0) {
         onImported();
@@ -76,28 +65,34 @@ export default function ImportModal({ format, project, onClose, onImported }: Pr
       onClick={onClose}
     >
       <div
-        style={{ width: "600px", maxHeight: "80vh", background: "#fff", borderRadius: "8px", boxShadow: "0 8px 40px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column", overflow: "hidden" }}
+        style={{ width: "520px", background: "#fff", borderRadius: "8px", boxShadow: "0 8px 40px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column", overflow: "hidden" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e0e0e0", display: "flex", alignItems: "center" }}>
-          <span style={{ fontSize: "15px", fontWeight: 600, flex: 1 }}>Import from {LABELS[format]}</span>
+          <span style={{ fontSize: "15px", fontWeight: 600, flex: 1 }}>Import from {FORMAT_LABELS[format]}</span>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "#888", padding: "0 4px" }}>×</button>
         </div>
 
-        <div style={{ padding: "16px 20px", flex: 1, overflow: "auto" }}>
-          <textarea
-            value={content}
-            onChange={(e) => { setContent(e.target.value); setError(""); setResult(null); }}
-            placeholder={PLACEHOLDERS[format]}
+        <div style={{ padding: "20px" }}>
+          <div style={{ fontSize: "13px", color: "#555", marginBottom: "10px" }}>{FORMAT_HINTS[format]}</div>
+          <input
+            autoFocus
+            value={directory}
+            onChange={(e) => { setDirectory(e.target.value); setError(""); setResult(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleImport(); }}
+            placeholder={FORMAT_PLACEHOLDERS[format]}
             style={{
-              width: "100%", height: "250px", fontFamily: "monospace", fontSize: "13px",
-              padding: "10px", border: "1px solid #ccc", borderRadius: "4px", resize: "vertical",
+              width: "100%", fontFamily: "monospace", fontSize: "13px",
+              padding: "8px 10px", border: "1px solid #ccc", borderRadius: "4px",
               outline: "none", boxSizing: "border-box",
             }}
           />
-          {error && <div style={{ color: "#d32f2f", fontSize: "13px", marginTop: "8px" }}>{error}</div>}
+          <div style={{ fontSize: "12px", color: "#999", marginTop: "8px" }}>
+            This replaces the current project's document hierarchy. The markdown files are read in place — nothing is copied.
+          </div>
+          {error && <div style={{ color: "#d32f2f", fontSize: "13px", marginTop: "10px" }}>{error}</div>}
           {result && result.warnings.length > 0 && (
-            <div style={{ marginTop: "10px" }}>
+            <div style={{ marginTop: "12px" }}>
               <div style={{ fontSize: "13px", fontWeight: 600, color: "#e65100", marginBottom: "4px" }}>
                 Imported {result.node_count} nodes with {result.warnings.length} warning(s):
               </div>
@@ -113,7 +108,7 @@ export default function ImportModal({ format, project, onClose, onImported }: Pr
           {result && result.warnings.length > 0 ? (
             <button onClick={handleConfirm} style={{ padding: "6px 16px", fontSize: "13px", border: "none", borderRadius: "4px", background: "#e65100", color: "#fff", cursor: "pointer" }}>Accept with warnings</button>
           ) : (
-            <button onClick={handleImport} disabled={loading || !content.trim()} style={{ padding: "6px 16px", fontSize: "13px", border: "none", borderRadius: "4px", background: content.trim() ? "#1a6fa8" : "#ccc", color: "#fff", cursor: content.trim() ? "pointer" : "default" }}>
+            <button onClick={handleImport} disabled={loading || !directory.trim()} style={{ padding: "6px 16px", fontSize: "13px", border: "none", borderRadius: "4px", background: directory.trim() ? "#1a6fa8" : "#ccc", color: "#fff", cursor: directory.trim() ? "pointer" : "default" }}>
               {loading ? "Importing..." : "Import"}
             </button>
           )}

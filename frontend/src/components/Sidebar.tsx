@@ -68,7 +68,7 @@ interface SidebarProps {
   selectedPath: string | null;
   onSelect: (path: string | null) => void;
   onOpen: (path: string) => void;
-  onCollectionChange: (c: CollectionStructure, changedPath?: string) => void;
+  onCollectionChange: (c: CollectionStructure) => void;
   onCreateFile: (filename: string) => Promise<void>;
   onDeleteFile: (path: string) => Promise<void>;
   onRenameFile: (oldPath: string, newName: string) => Promise<void>;
@@ -82,17 +82,15 @@ interface SidebarProps {
   onSwitchProject: (name: string) => void;
   onCreateProject: (name: string) => Promise<void>;
   onDeleteProject: (name: string) => Promise<void>;
+  onArchiveProject: (name: string) => Promise<void>;
   onRenameProject: (oldName: string, newName: string) => Promise<void>;
   onOpenProjectMd: () => void;
   onRefresh: () => Promise<void>;
-  onUndo: () => void;
-  canUndo: boolean;
-  undoPath: string | null;
   onImport: (format: "mkdocs" | "docusaurus") => void;
   onExport: (format: "mkdocs" | "docusaurus") => void;
 }
 
-export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onCreateChildFile, onOpenYaml, yamlOpen, orphans, currentProject, currentProjectTitle, projects, onSwitchProject, onCreateProject, onDeleteProject, onRenameProject, onOpenProjectMd, onRefresh, onUndo, canUndo, undoPath, onImport, onExport }: SidebarProps) {
+export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onCreateChildFile, onOpenYaml, yamlOpen, orphans, currentProject, currentProjectTitle, projects, onSwitchProject, onCreateProject, onDeleteProject, onArchiveProject, onRenameProject, onOpenProjectMd, onRefresh, onImport, onExport }: SidebarProps) {
   const [titleMode, setTitleMode] = useState(false);
   const [orphanSort, setOrphanSort] = useState<"recent" | "alpha" | "custom">("recent");
   const [orphanOrder, setOrphanOrder] = useState<string[]>([]);
@@ -110,6 +108,36 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
   const orphanSectionRef = useRef<HTMLDivElement>(null);
   const orphanChipRefs = useRef<Map<string, HTMLElement>>(new Map());
   const cursorOverZoneRef = useRef(false);
+
+  // Document-level keydown for orphan up/down/left when orphans are selected
+  useEffect(() => {
+    if (selectedOrphans.size === 0 || selectedPath) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown" && e.key !== "ArrowLeft") return;
+      if ((e.target as HTMLElement).tagName === "INPUT") return;
+      e.preventDefault();
+      if (e.key === "ArrowLeft") {
+        addOrphansToCollection([...selectedOrphans]);
+        return;
+      }
+      if (selectedOrphans.size !== 1) return;
+      const path = [...selectedOrphans][0];
+      setOrphanSort("custom");
+      setOrphanOrder(prev => {
+        const list = prev.length ? prev : orphans.map(o => o.path);
+        const idx = list.indexOf(path);
+        if (idx === -1) return list;
+        if (e.key === "ArrowUp" && idx === 0) return list;
+        if (e.key === "ArrowDown" && idx === list.length - 1) return list;
+        const next = [...list];
+        const swap = e.key === "ArrowUp" ? idx - 1 : idx + 1;
+        [next[idx], next[swap]] = [next[swap], next[idx]];
+        return next;
+      });
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [selectedOrphans, selectedPath, orphans]);
   useEffect(() => {
     setExpanded(prev => {
       const currentPaths = new Set(flatIds(collection.root));
@@ -140,6 +168,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
   }, [orphans]);
 
   const handleOrphanSelect = (path: string, ctrl: boolean) => {
+    onSelect(null);
     setSelectedOrphans(prev => {
       if (ctrl) { const next = new Set(prev); next.has(path) ? next.delete(path) : next.add(path); return next; }
       if (prev.size === 1 && prev.has(path)) return new Set<string>();
@@ -147,12 +176,18 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
     });
   };
 
+  // Clear orphan selection when a hierarchy item is selected
+  const handleHierarchySelect = useCallback((path: string | null) => {
+    if (path !== null) setSelectedOrphans(new Set());
+    onSelect(path);
+  }, [onSelect]);
+
   const addOrphansToCollection = (paths: string[]) => {
     const newNodes: FileNode[] = paths.map(p => {
       const info = orphans.find(o => o.path === p)!;
       return { path: p, title: info.title, order: 0, children: [] };
     });
-    onCollectionChange({ root: reorder([...collection.root, ...newNodes]) }, paths.length === 1 ? paths[0] : undefined);
+    onCollectionChange({ root: reorder([...collection.root, ...newNodes]) });
     setSelectedOrphans(new Set());
     setTimeout(() => onRefresh(), 300);
   };
@@ -202,9 +237,9 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
   const refocusTree = () => setTimeout(() => treeRef.current?.focus(), 0);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).tagName === "INPUT") return;
     if (!selectedPath) return;
     if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) return;
-    if ((e.target as HTMLElement).tagName === "INPUT") return;
     e.preventDefault();
     const root = collection.root;
     if (e.key === "ArrowRight") {
@@ -335,7 +370,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
     const isFromHierarchy = !orphans.some(o => o.path === dragged);
     if (isFromHierarchy && (droppedOnZone || (over && orphans.some(o => o.path === over.id as string)))) {
       const [newRoot] = removeNode(collection.root, dragged);
-      onCollectionChange({ root: reorder(newRoot) }, dragged);
+      onCollectionChange({ root: reorder(newRoot) });
       setTimeout(() => onRefresh(), 300);
       return;
     }
@@ -360,7 +395,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
     const newNodes = computeNewRoot(dragged, target, delta.x);
     if (!newNodes) return;
     if (delta.x > 30) setExpanded(prev => { const s = new Set(prev); s.add(target); return s; });
-    onCollectionChange({ root: newNodes }, dragged);
+    onCollectionChange({ root: newNodes });
     if (wasOrphan) setTimeout(() => onRefresh(), 300);
   }
 
@@ -393,13 +428,13 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
         <div style={{ position: "absolute", left: 0, top: dpadTop ?? 280, width: "1in", display: "flex", justifyContent: "center", zIndex: 5, transform: "translateY(-50%)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "auto auto auto" }}>
             <div />
-            <button onClick={() => fireArrow("up")} title="Move up (↑)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 6px", fontSize: "13px", color: "#1a6fa8", borderRadius: "3px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▲</button>
+            <button onClick={() => fireArrow("up")} title="Move up (↑)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 6px", fontSize: "13px", color: "#1a6fa8", borderRadius: "4px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▲</button>
             <div />
-            <button onClick={() => fireArrow("left")} title="Unnest (←)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 5px", fontSize: "13px", color: "#1a6fa8", borderRadius: "3px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>◀</button>
+            <button onClick={() => fireArrow("left")} title="Unnest (←)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 5px", fontSize: "13px", color: "#1a6fa8", borderRadius: "4px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>◀</button>
             <div style={{ width: "4px" }} />
-            <button onClick={() => fireArrow("right")} title="Nest (→)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 5px", fontSize: "13px", color: "#1a6fa8", borderRadius: "3px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▶</button>
+            <button onClick={() => fireArrow("right")} title="Nest (→)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 5px", fontSize: "13px", color: "#1a6fa8", borderRadius: "4px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▶</button>
             <div />
-            <button onClick={() => fireArrow("down")} title="Move down (↓)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 6px", fontSize: "13px", color: "#1a6fa8", borderRadius: "3px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▼</button>
+            <button onClick={() => fireArrow("down")} title="Move down (↓)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 6px", fontSize: "13px", color: "#1a6fa8", borderRadius: "4px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▼</button>
             <div />
           </div>
         </div>
@@ -421,6 +456,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                   setTitleMode={setTitleMode}
                   onSwitchProject={onSwitchProject}
                   onCreateProject={onCreateProject}
+                  onArchiveProject={onArchiveProject}
                   onRenameProject={onRenameProject}
                   onOpenProjectMd={onOpenProjectMd}
                   onRefresh={onRefresh}
@@ -443,7 +479,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                   showTopIndicator={idx === 0 && activeId !== null && overId === TOP_SENTINEL}
                   selectedPath={selectedPath}
                   titleMode={titleMode}
-                  onSelect={onSelect}
+                  onSelect={handleHierarchySelect}
                   onOpen={onOpen}
                   onDelete={handleDelete}
                   onRename={onRenameFile}
@@ -454,9 +490,6 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                   activeId={activeId}
                   activeLabel={activeLabel}
                   dragDeltaX={dragDeltaX}
-                  undoPath={undoPath}
-                  onUndo={onUndo}
-                  canUndo={canUndo}
                   currentProject={currentProject}
                 />
               ))}
@@ -476,7 +509,6 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                 orphanSort={orphanSort} setOrphanSort={setOrphanSort} orphanOrder={orphanOrder}
                 rubberBand={rubberBand} orphanSectionRef={orphanSectionRef} orphanChipRefs={orphanChipRefs}
                 onOpen={onOpen} onDelete={handleDelete} onAddOrphansToCollection={addOrphansToCollection} onRefresh={onRefresh}
-                undoPath={undoPath} onUndo={onUndo} canUndo={canUndo}
                 arrowBtnRef={orphanArrowRef}
               />
             )}
@@ -495,7 +527,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                   ? "inset 5px 0 0 0 #1a6fa8, 0 6px 20px rgba(0,0,0,0.22)"
                   : "0 6px 20px rgba(0,0,0,0.22)",
                 opacity: 0.97, userSelect: "none",
-                padding: "10px 10px 10px 12px",
+                padding: "5px 10px 5px 12px", /* was 10px, then 7px */
               }}>
                 <span style={{ fontSize: "15px", fontWeight: 500, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeLabel}</span>
               </div>

@@ -29,7 +29,7 @@ function RenameInput({ currentPath, onCommit, onCancel }: {
       onClick={(e) => e.stopPropagation()}
       style={{
         background: "#fff", border: "1px solid #ff8c00",
-        borderRadius: "3px", color: "#1a1a1a", fontSize: "14px",
+        borderRadius: "4px", color: "#1a1a1a", fontSize: "14px",
         padding: "1px 4px", outline: "none", minWidth: 0, width: "160px",
       }}
     />
@@ -88,14 +88,11 @@ export interface ItemProps {
   activeId: string | null;
   activeLabel: string;
   dragDeltaX: number;
-  undoPath: string | null;
-  onUndo: () => void;
-  canUndo: boolean;
   showTopIndicator?: boolean;
   currentProject: string;
 }
 
-export function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode, onSelect, onOpen, onDelete, onRename, onCreateChild, expanded, toggleExpand, overId, activeId, activeLabel, dragDeltaX, undoPath, onUndo, canUndo, showTopIndicator, currentProject }: ItemProps) {
+export function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode, onSelect, onOpen, onDelete, onRename, onCreateChild, expanded, toggleExpand, overId, activeId, activeLabel, dragDeltaX, showTopIndicator, currentProject }: ItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.path });
   const [renaming, setRenaming] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -173,10 +170,10 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => { setHovered(false); setPreviewContent(null); }}
           >
-            <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, gap: "2px", padding: "10px 36px 10px 12px", position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, gap: "2px", padding: "5px 36px 5px 12px" /* was 10px, then 7px */, position: "relative" }}>
               {hasChildren ? (
-                <span onClick={(e) => { e.stopPropagation(); toggleExpand(node.path); }} style={{ width: "16px", flexShrink: 0, marginTop: "-10px", marginBottom: "-10px", marginRight: "3px", paddingTop: "10px", paddingBottom: "10px", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                  <svg width="11" height="16" viewBox="0 0 11 16" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}><polyline points="2,2 9,8 2,14"/></svg>
+                <span onClick={(e) => { e.stopPropagation(); toggleExpand(node.path); }} style={{ width: "16px", flexShrink: 0, marginTop: "-5px", marginBottom: "-5px", marginRight: "3px", paddingTop: "5px", paddingBottom: "5px", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  <svg width="9" height="13" viewBox="0 0 11 16" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}><polyline points="2,2 9,8 2,14"/></svg>
                 </span>
               ) : (
                 <span style={{ width: "16px", marginRight: "3px", flexShrink: 0 }} />
@@ -196,13 +193,6 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
                   {label}
                 </span>
               )}
-              {canUndo && undoPath === node.path && (
-                <span
-                  onClick={(e) => { e.stopPropagation(); onUndo(); }}
-                  title="Undo (Ctrl+Z)"
-                  style={{ flexShrink: 0, cursor: "pointer", fontSize: "14px", color: "#888", padding: "0 2px", lineHeight: 1 }}
-                >↩</span>
-              )}
               {/* ⋮ trigger — menu rendered inside so top: 50%, left: 50% = top-left at button center */}
               <span
                 ref={menuTriggerRef}
@@ -211,7 +201,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
               >
                 ⋮
                 {menuOpen && (
-                  <div onClick={(e) => e.stopPropagation()} style={{ position: "fixed", top: menuPos?.top ?? 0, left: menuPos?.left ?? 0, zIndex: 200, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "150px", overflow: "hidden" }}>
+                  <div onClick={(e) => e.stopPropagation()} style={{ position: "fixed", top: menuPos?.top ?? 0, left: menuPos?.left ?? 0, zIndex: 200, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "150px", overflow: "hidden" }}>
                     <div style={mi} onClick={() => { onOpen(node.path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Edit</div>
                     <div style={mi} onClick={() => { setAddingChild(true); setChildName(""); setChildError(""); setMenuOpen(false); setTimeout(() => childInputRef.current?.focus(), 50); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Add sub-page</div>
                     <div style={{ ...mi, color: "#c00" }} onClick={() => { onDelete(node.path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#fff5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Delete</div>
@@ -226,7 +216,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
               position: "absolute", left: "calc(2.5in + 12px)", top: 0,
               zIndex: 200, width: "260px", pointerEvents: "none",
               background: "#fff", border: "1px solid #d0e8f7",
-              borderRadius: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
+              borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
               padding: "8px 10px",
             }}>
               <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "5px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.path}</div>
@@ -248,10 +238,10 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
                     if (e.key === "Escape") { setAddingChild(false); setChildName(""); setChildError(""); }
                   }}
                   placeholder="filename.md"
-                  style={{ padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "3px", color: "#1a1a1a", fontSize: "12px", outline: "none", width: "140px" }}
+                  style={{ padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "4px", color: "#1a1a1a", fontSize: "12px", outline: "none", width: "140px" }}
                 />
-                <button onClick={submitChild} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
-                <button onClick={() => { setAddingChild(false); setChildName(""); setChildError(""); }} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
+                <button onClick={submitChild} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "4px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
+                <button onClick={() => { setAddingChild(false); setChildName(""); setChildError(""); }} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "4px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
               </div>
               {childError && <div style={{ color: "#f66", fontSize: "11px" }}>{childError}</div>}
             </div>
@@ -274,7 +264,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
           />
           <div style={{
             display: "inline-flex", alignItems: "center",
-            width: "2.5in", padding: "10px 12px",
+            width: "2.5in", padding: "5px 12px", /* was 10px, then 7px */
             border: "1.5px solid #1a6fa8", borderRadius: "6px",
             background: "#e8f4fd",
           }}>
@@ -307,9 +297,6 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
             activeId={activeId}
             activeLabel={activeLabel}
             dragDeltaX={dragDeltaX}
-            undoPath={undoPath}
-            onUndo={onUndo}
-            canUndo={canUndo}
             currentProject={currentProject}
           />
         ))

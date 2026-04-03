@@ -23,9 +23,6 @@ interface OrphanPaneProps {
   onDelete: (path: string) => void;
   onAddOrphansToCollection: (paths: string[]) => void;
   onRefresh: () => Promise<void>;
-  undoPath: string | null;
-  onUndo: () => void;
-  canUndo: boolean;
   arrowBtnRef?: RefObject<HTMLButtonElement | null>;
 }
 
@@ -35,7 +32,7 @@ export default function OrphanPane({
   orphanSort, setOrphanSort, orphanOrder,
   rubberBand, orphanSectionRef, orphanChipRefs,
   onOpen, onDelete, onAddOrphansToCollection, onRefresh,
-  undoPath, onUndo, canUndo, arrowBtnRef,
+  arrowBtnRef,
 }: OrphanPaneProps) {
   const [orphansExpanded, setOrphansExpanded] = useState(true);
   const [creatingFile, setCreatingFile] = useState(false);
@@ -75,12 +72,11 @@ export default function OrphanPane({
             background: "#1a6fa8", border: "none", borderRadius: "4px 4px 0 0",
             padding: "5px 12px", cursor: "pointer",
             display: "flex", alignItems: "center", gap: "6px",
-            fontSize: "12px", fontWeight: 500, color: "#fff",
+            fontSize: "13px", fontWeight: 500, color: "#fff", letterSpacing: "0.3px",
           }}
         >
-          <span style={{ color: "#f90" }}>⚠</span>
-          <span>Orphans</span>
-          <span style={{ fontSize: "10px" }}>{orphansExpanded ? "▾" : "▸"}</span>
+          <span style={{ color: "#f90", position: "relative", top: "-1.5px" }}>⚠</span>
+          <span>Unlinked</span>
         </button>
       </div>
       {/* Content row: arrow column + orphan list */}
@@ -92,11 +88,11 @@ export default function OrphanPane({
               <button
                 ref={arrowBtnRef}
                 onClick={() => { if (selectedOrphans.size > 0) onAddOrphansToCollection([...selectedOrphans]); }}
-                title={selectedOrphans.size > 0 ? `Add ${selectedOrphans.size} to hierarchy` : "Select orphans to add"}
+                title={selectedOrphans.size > 0 ? `Add ${selectedOrphans.size} to hierarchy` : "Select files to add"}
                 style={{
                   background: selectedOrphans.size > 0 ? "#1a6fa8" : "#e0e0e0",
                   border: `1.5px solid ${selectedOrphans.size > 0 ? "#1a6fa8" : "#aaa"}`,
-                  borderRadius: "4px", padding: "7px 9px",
+                  borderRadius: "4px", padding: "4px 9px",
                   cursor: selectedOrphans.size > 0 ? "pointer" : "default",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: selectedOrphans.size > 0 ? "#fff" : "#888",
@@ -104,7 +100,7 @@ export default function OrphanPane({
               >
                 <svg width="22" height="14" viewBox="0 0 22 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="21" y1="7" x2="1" y2="7"/>
-                  <polyline points="7 1 1 7 7 13"/>
+                  <polyline points="6 3.5 1 7 6 10.5"/>
                 </svg>
               </button>
             </div>
@@ -131,10 +127,10 @@ export default function OrphanPane({
                     onChange={(e) => { setNewFileName(e.target.value); setCreateError(""); }}
                     onKeyDown={(e) => { if (e.key === "Enter") submitFile(); if (e.key === "Escape") { setCreatingFile(false); setNewFileName(""); setCreateError(""); } }}
                     placeholder="filename.md"
-                    style={{ padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "3px", color: "#1a1a1a", fontSize: "12px", outline: "none", width: "140px" }}
+                    style={{ padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "4px", color: "#1a1a1a", fontSize: "12px", outline: "none", width: "140px" }}
                   />
-                  <button onClick={submitFile} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
-                  <button onClick={() => { setCreatingFile(false); setNewFileName(""); setCreateError(""); }} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
+                  <button onClick={submitFile} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "4px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
+                  <button onClick={() => { setCreatingFile(false); setNewFileName(""); setCreateError(""); }} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "4px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
                 </div>
                 {createError && <div style={{ color: "#f66", fontSize: "11px" }}>{createError}</div>}
               </div>
@@ -147,7 +143,7 @@ export default function OrphanPane({
                 onAddToSelection={onAddToSelection}
                 onOpen={onOpen} onDelete={onDelete} onAddToHierarchy={(p) => onAddOrphansToCollection([p])} currentProject={currentProject}
                 setChipRef={(el) => { if (el) orphanChipRefs.current.set(o.path, el); else orphanChipRefs.current.delete(o.path); }}
-                activeId={activeId} undoPath={undoPath} onUndo={onUndo} canUndo={canUndo}
+                activeId={activeId}
               />
             ))}
             {rubberBand && (

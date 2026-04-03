@@ -27,4 +27,5 @@ class ReorderRequest(BaseModel):
 
 
 class ImportRequest(BaseModel):
-    content: str
+    content: str = ""
+    directory: Optional[str] = None

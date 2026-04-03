@@ -16,12 +16,9 @@ export interface OrphanItemProps {
   currentProject: string;
   setChipRef: (el: HTMLElement | null) => void;
   activeId: string | null;
-  undoPath: string | null;
-  onUndo: () => void;
-  canUndo: boolean;
 }
 
-export function OrphanItem({ path, title, titleMode, isMultiSelected, onMultiSelect, onAddToSelection, onOpen, onDelete, onAddToHierarchy, currentProject, setChipRef, activeId, undoPath, onUndo, canUndo }: OrphanItemProps) {
+export function OrphanItem({ path, title, titleMode, isMultiSelected, onMultiSelect, onAddToSelection, onOpen, onDelete, onAddToHierarchy, currentProject, setChipRef, activeId }: OrphanItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: path });
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,7 +53,7 @@ export function OrphanItem({ path, title, titleMode, isMultiSelected, onMultiSel
             width: "2.5in", overflow: "visible",
             background: isMultiSelected ? "#fff3e0" : hovered ? "#fff8f0" : "transparent",
             boxShadow: isMultiSelected ? "inset 5px 0 0 0 #ff8c00" : "none",
-            borderRadius: "3px", cursor: "pointer", userSelect: "none",
+            borderRadius: "4px", cursor: "pointer", userSelect: "none", outline: "none",
           }}
           onClick={(e) => {
             if (e.altKey) {
@@ -73,13 +70,6 @@ export function OrphanItem({ path, title, titleMode, isMultiSelected, onMultiSel
             <span style={{ fontSize: "15px", fontWeight: 500, color: "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }} title={label}>
               {label}
             </span>
-            {hovered && canUndo && undoPath === path && (
-              <span
-                onClick={(e) => { e.stopPropagation(); onUndo(); }}
-                title="Undo (Ctrl+Z)"
-                style={{ flexShrink: 0, cursor: "pointer", fontSize: "14px", color: "#888", padding: "0 2px", lineHeight: 1 }}
-              >↩</span>
-            )}
             {(isMultiSelected || hovered) && (
               <span
                 ref={menuTriggerRef}
@@ -94,7 +84,7 @@ export function OrphanItem({ path, title, titleMode, isMultiSelected, onMultiSel
             position: "fixed", left: previewFixed.left, top: previewFixed.top,
             zIndex: 200, width: "260px", pointerEvents: "none",
             background: "#fff", border: "1px solid #d0e8f7",
-            borderRadius: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
+            borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
             padding: "8px 10px",
           }}>
             <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "5px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{path}</div>
@@ -104,7 +94,7 @@ export function OrphanItem({ path, title, titleMode, isMultiSelected, onMultiSel
           </div>
         )}
         {menuOpen && (
-          <div ref={menuRef} style={{ position: "absolute", top: "100%", right: 0, zIndex: 100, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "140px", overflow: "hidden" }}>
+          <div ref={menuRef} style={{ position: "absolute", top: "100%", right: 0, zIndex: 100, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "140px", overflow: "hidden" }}>
               <div style={mi} onClick={() => { onOpen(path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Edit</div>
               <div style={{ ...mi, color: "#c00" }} onClick={() => { onDelete(path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#fff5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Delete</div>
             </div>

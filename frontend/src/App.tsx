@@ -5,7 +5,7 @@ import YAMLEditor from "./components/YAMLEditor";
 import ImportModal from "./components/ImportModal";
 import ExportModal from "./components/ExportModal";
 import {
-  listProjects, createProject, deleteProject, renameProject,
+  listProjects, createProject, deleteProject, archiveProject, renameProject,
   fetchProjectMd, saveProjectMd,
   fetchCollection, saveCollection, fetchMarkdown, saveMarkdown, fetchCollectionYaml,
   fetchOrphans, createFile, deleteFile, renameFile,
@@ -31,9 +31,6 @@ export default function App() {
   const [overlayType, setOverlayType] = useState<OverlayType>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  type UndoEntry = { snapshot: CollectionStructure; movedPath: string | null };
-  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
-  const [undoPath, setUndoPath] = useState<string | null>(null);
   const [importModal, setImportModal] = useState<{ format: "mkdocs" | "docusaurus" } | null>(null);
   const [exportModal, setExportModal] = useState<{ format: "mkdocs" | "docusaurus" } | null>(null);
 
@@ -81,9 +78,6 @@ export default function App() {
     setOverlayType(null);
     setCollection({ root: [] });
     setOrphans([]);
-    setUndoStack([]);
-    setUndoPath(null);
-
     await loadCollection(name);
   }, [loadCollection]);
 
@@ -93,6 +87,7 @@ export default function App() {
     setProjects(ps);
     await handleSwitchProject(name);
   }, [handleSwitchProject]);
+
 
   const handleRenameProject = useCallback(async (oldName: string, newName: string) => {
     const { new_name } = await renameProject(oldName, newName);
@@ -115,6 +110,23 @@ export default function App() {
       setOverlayType(null);
     }
   }, [handleSwitchProject]);
+
+  const handleArchiveProject = useCallback(async (name: string) => {
+    await archiveProject(name);
+    const ps = await listProjects();
+    setProjects(ps);
+    window.alert(`"${name}" is now archived`);
+    if (name === currentProject) {
+      if (ps.length > 0) {
+        await handleSwitchProject(ps[0].name);
+      } else {
+        setCurrentProject(null);
+        setCollection({ root: [] });
+        setOrphans([]);
+        setOverlayType(null);
+      }
+    }
+  }, [currentProject, handleSwitchProject]);
 
   const handleHighlight = useCallback((path: string | null) => {
     setSelectedPath(path);
@@ -167,42 +179,15 @@ export default function App() {
     setCollection(prev => ({ root: updateTitle(prev.root) }));
   }, []);
 
-  const handleCollectionChange = useCallback(async (c: CollectionStructure, changedPath?: string) => {
+  const handleCollectionChange = useCallback(async (c: CollectionStructure) => {
     if (!currentProject) return;
-    setUndoStack(prev => [...prev.slice(-19), { snapshot: collection, movedPath: changedPath ?? null }]);
-    setUndoPath(changedPath ?? null);
     setCollection(c);
     try {
       await saveCollection(currentProject, c);
       const o = await fetchOrphans(currentProject);
       setOrphans(o);
     } catch {}
-  }, [currentProject, collection]);
-
-  const handleUndo = useCallback(async () => {
-    if (!currentProject || undoStack.length === 0) return;
-    const entry = undoStack[undoStack.length - 1];
-    const newStack = [...undoStack.slice(0, -1), { snapshot: collection, movedPath: entry.movedPath }];
-    setUndoStack(newStack);
-    setUndoPath(entry.movedPath);
-    setCollection(entry.snapshot);
-    try {
-      await saveCollection(currentProject, entry.snapshot);
-      const o = await fetchOrphans(currentProject);
-      setOrphans(o);
-    } catch {}
-  }, [currentProject, undoStack]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-      }
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [handleUndo]);
+  }, [currentProject]);
 
   const handleCreateFile = useCallback(async (filename: string) => {
     if (!currentProject) return;
@@ -290,12 +275,10 @@ export default function App() {
           onSwitchProject={handleSwitchProject}
           onCreateProject={handleCreateProject}
           onDeleteProject={handleDeleteProject}
+          onArchiveProject={handleArchiveProject}
           onRenameProject={handleRenameProject}
           onOpenProjectMd={handleOpenProjectMd}
           onRefresh={handleRefresh}
-          onUndo={handleUndo}
-          canUndo={undoStack.length > 0}
-          undoPath={undoPath}
           onImport={(fmt) => setImportModal({ format: fmt })}
           onExport={(fmt) => setExportModal({ format: fmt })}
         />
@@ -350,6 +333,7 @@ export default function App() {
           {error}
         </div>
       )}
+
 
       {importModal && currentProject && (
         <ImportModal

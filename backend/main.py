@@ -1,6 +1,7 @@
 import shutil
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from typing import Optional
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +22,8 @@ from utils import (
     create_project,
     migrate_legacy_data,
     md_to_html,
+    load_project_config,
+    save_project_config,
 )
 
 FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
@@ -51,12 +54,17 @@ def list_projects_endpoint():
 
 
 @app.post("/api/projects/{project_name}")
-def create_project_endpoint(project_name: str):
-    """Create a new project directory."""
+def create_project_endpoint(project_name: str, body: Optional[dict] = Body(default=None)):
+    """Create a new project directory, optionally pointing at an external markdowns directory."""
     project_dir = PROJECTS_DIR / project_name
     if project_dir.exists():
         raise HTTPException(status_code=409, detail="Project already exists")
-    create_project(project_name)
+    markdowns_dir = (body or {}).get("markdowns_dir")
+    if markdowns_dir:
+        p = Path(markdowns_dir)
+        if not p.exists() or not p.is_dir():
+            raise HTTPException(status_code=400, detail="Directory not found")
+    create_project(project_name, markdowns_dir)
     return {"status": "ok", "name": project_name}
 
 
@@ -74,6 +82,22 @@ def rename_project_endpoint(project_name: str, body: dict):
         raise HTTPException(status_code=409, detail="A project with that name already exists")
     old_dir.rename(new_dir)
     return {"status": "ok", "new_name": new_name}
+
+
+@app.post("/api/projects/{project_name}/archive")
+def archive_project_endpoint(project_name: str):
+    """Move project to _archive instead of deleting it."""
+    import time
+    project_dir = PROJECTS_DIR / project_name
+    if not project_dir.exists():
+        raise HTTPException(status_code=404, detail="Project not found")
+    archive_dir = PROJECTS_DIR / "_archive"
+    archive_dir.mkdir(exist_ok=True)
+    dest = archive_dir / project_name
+    if dest.exists():
+        dest = archive_dir / f"{project_name}-{int(time.time())}"
+    project_dir.rename(dest)
+    return {"status": "ok"}
 
 
 @app.delete("/api/projects/{project_name}")
@@ -101,6 +125,27 @@ def save_project_md(project_name: str, body: FileContent):
     path = get_project_md_file(project_name)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body.content, encoding="utf-8")
+    return {"status": "ok"}
+
+
+# ── Project config ─────────────────────────────────────────────────────────────
+
+@app.get("/api/projects/{project_name}/config")
+def get_project_config_endpoint(project_name: str):
+    return load_project_config(project_name)
+
+
+@app.put("/api/projects/{project_name}/config")
+def set_project_config_endpoint(project_name: str, body: dict):
+    project_dir = PROJECTS_DIR / project_name
+    if not project_dir.exists():
+        raise HTTPException(status_code=404, detail="Project not found")
+    if "markdowns_dir" in body and body["markdowns_dir"]:
+        p = Path(body["markdowns_dir"])
+        if not p.exists() or not p.is_dir():
+            raise HTTPException(status_code=400, detail="Directory not found")
+        body["markdowns_dir"] = str(p.resolve())
+    save_project_config(project_name, body)
     return {"status": "ok"}
 
 
@@ -263,14 +308,25 @@ def save_collection_yaml(project_name: str, body: dict):
 
 # ── Import / Export ───────────────────────────────────────────────────────────
 
-from converters import parse_mkdocs_nav, parse_docusaurus_sidebar, export_mkdocs_nav, export_docusaurus_sidebar
+from converters import (
+    parse_mkdocs_nav, parse_docusaurus_sidebar, export_mkdocs_nav, export_docusaurus_sidebar,
+    read_mkdocs_project, read_docusaurus_project,
+)
 
 
 @app.post("/api/projects/{project_name}/import/mkdocs")
 def import_mkdocs(project_name: str, req: ImportRequest):
+    if req.directory:
+        try:
+            content, docs_dir = read_mkdocs_project(req.directory)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        save_project_config(project_name, {"markdowns_dir": str(docs_dir)})
+    else:
+        content = req.content
     existing = {f["path"] for f in get_all_md_files(project_name)}
     try:
-        collection, warnings = parse_mkdocs_nav(req.content, existing)
+        collection, warnings = parse_mkdocs_nav(content, existing)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     save_collection(project_name, collection)
@@ -279,9 +335,17 @@ def import_mkdocs(project_name: str, req: ImportRequest):
 
 @app.post("/api/projects/{project_name}/import/docusaurus")
 def import_docusaurus(project_name: str, req: ImportRequest):
+    if req.directory:
+        try:
+            content, docs_dir = read_docusaurus_project(req.directory)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        save_project_config(project_name, {"markdowns_dir": str(docs_dir)})
+    else:
+        content = req.content
     existing = {f["path"] for f in get_all_md_files(project_name)}
     try:
-        collection, warnings = parse_docusaurus_sidebar(req.content, existing)
+        collection, warnings = parse_docusaurus_sidebar(content, existing)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     save_collection(project_name, collection)

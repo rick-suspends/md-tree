@@ -1,6 +1,7 @@
 import json
 import re
 import yaml
+from pathlib import Path
 from models import FileNode, CollectionStructure
 
 
@@ -112,6 +113,39 @@ def _parse_docusaurus_items(items: list, existing_files: set[str], warnings: lis
                         nodes.append(child)
                         order += 1
     return nodes
+
+
+def read_mkdocs_project(directory: str) -> tuple[str, Path]:
+    """Read mkdocs.yml from a MkDocs project root. Returns (nav_yaml_text, docs_dir)."""
+    root = Path(directory).resolve()
+    config_file = root / "mkdocs.yml"
+    if not config_file.exists():
+        raise ValueError(f"mkdocs.yml not found in {directory}")
+    text = config_file.read_text(encoding="utf-8")
+    data = yaml.safe_load(text) or {}
+    docs_subdir = data.get("docs_dir", "docs")
+    docs_dir = root / docs_subdir
+    if not docs_dir.exists():
+        raise ValueError(f"Docs directory '{docs_subdir}' not found in {directory}")
+    return text, docs_dir
+
+
+def read_docusaurus_project(directory: str) -> tuple[str, Path]:
+    """Read sidebars.js/ts from a Docusaurus project root. Returns (sidebar_text, docs_dir)."""
+    root = Path(directory).resolve()
+    sidebar_file = None
+    for name in ("sidebars.js", "sidebars.ts"):
+        candidate = root / name
+        if candidate.exists():
+            sidebar_file = candidate
+            break
+    if sidebar_file is None:
+        raise ValueError(f"sidebars.js or sidebars.ts not found in {directory}")
+    text = sidebar_file.read_text(encoding="utf-8")
+    docs_dir = root / "docs"
+    if not docs_dir.exists():
+        raise ValueError(f"docs/ directory not found in {directory}")
+    return text, docs_dir
 
 
 def export_mkdocs_nav(collection: CollectionStructure) -> str:
