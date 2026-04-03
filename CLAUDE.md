@@ -113,12 +113,40 @@ Files in `markdowns/` not referenced in `collection.yaml`. Shown in the orphan p
 
 ---
 
+## Deployment
+
+### GitHub Pages (docs)
+- Workflow: `.github/workflows/docs.yml` — triggers on push to main when docs or mkdocs.yml change
+- Copies `projects/documentation/markdowns/*.md` into `docs/`, then runs `mkdocs build`
+- `docs/index.md` redirects to `/introduction/`
+- Theme: Material for MkDocs, custom blue/orange palette via `docs/stylesheets/extra.css`
+- Live at: https://rick-suspends.github.io/md-tree/
+
+### Lightsail Container (demo)
+- `Dockerfile`: multi-stage — Node builds frontend with `VITE_DEMO_MODE=1`, Python runtime with cron
+- `VITE_DEMO_MODE=1` baked at build time; hides Import/Export menu items in `ProjectChip.tsx`
+- `entrypoint.sh`: starts cron daemon (midnight project reset) then uvicorn on port 8002
+- Pristine docs copy at `/app/projects-pristine/`; cron resets `/app/projects/documentation/` nightly
+- Health check endpoint: `GET /health` → `{"status": "ok"}`
+- Docker Hub image: `richardmallery/md-tree-demo:latest`
+- Protocol: HTTP on 8002; Lightsail terminates HTTPS
+
+### Docs update workflow
+1. Edit docs in mdTree locally
+2. Export to MkDocs if nav changed (⋮ → Export to... → MkDocs)
+3. `git push` → GitHub Actions rebuilds Pages automatically
+4. `docker build -t richardmallery/md-tree-demo . && docker push richardmallery/md-tree-demo:latest` → redeploy on Lightsail
+
+---
+
 ## TODO
 
-1. ~~**Import/Export**~~ — done: import reads config from project root; export writes file to project root; MkDocs parser handles proper nesting
-2. ~~**Keyboard-only reorder**~~ — done: left/right nest/unnest, up/down cross-level movement; left-arrow moves orphans to hierarchy
+1. ~~**Import/Export**~~ — done
+2. ~~**Keyboard-only reorder**~~ — done
 3. ~~**Search/filter**~~ — dropped; low value for a hierarchy-focused tool
-4. **Documentation project** — self-hosted docs as an mdTree project; users can read it in the app — **next up**
+4. ~~**Documentation project**~~ — done: 8-page docs at `projects/documentation/`, published to GitHub Pages
+5. ~~**GitHub Pages deployment**~~ — done: MkDocs Material, GitHub Actions workflow
+6. ~~**Lightsail container demo**~~ — done: Docker image with demo mode, daily reset
 
 ---
 
