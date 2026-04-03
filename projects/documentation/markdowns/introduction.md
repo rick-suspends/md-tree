@@ -14,4 +14,4 @@ When you're ready to publish, .mdTree can export your hierarchy directly to MkDo
 
 ## How this documentation works
 
-This documentation is itself an .mdTree project. You're reading it inside the app. Use the hierarchy on the left to navigate between pages, and the editor to open any file for reading or editing.
+This documentation is itself an .mdTree project — managed in .mdTree and published to GitHub Pages. If you're running .mdTree locally, you can open the documentation project directly in the app to read or edit any page.
