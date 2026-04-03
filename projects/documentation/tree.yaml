@@ -1,0 +1,33 @@
+root:
+  - path: introduction.md
+    title: Introduction
+    order: 0
+    children: []
+  - path: getting-started.md
+    title: Getting Started
+    order: 1
+    children: []
+  - path: projects.md
+    title: Managing Projects
+    order: 2
+    children: []
+  - path: hierarchy.md
+    title: Building Your Hierarchy
+    order: 3
+    children: []
+  - path: unlinked-files.md
+    title: Unlinked Files
+    order: 4
+    children: []
+  - path: editing.md
+    title: Editing Files
+    order: 5
+    children: []
+  - path: import-export.md
+    title: Import & Export
+    order: 6
+    children: []
+  - path: keyboard-shortcuts.md
+    title: Keyboard Shortcuts
+    order: 7
+    children: []
