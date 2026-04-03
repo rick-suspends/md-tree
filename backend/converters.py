@@ -39,11 +39,30 @@ def _parse_mkdocs_items(items: list, existing_files: set[str], warnings: list[st
                     nodes.append(FileNode(path=path, title=title, order=order, children=[]))
                     order += 1
                 elif isinstance(value, list):
-                    children = _parse_mkdocs_items(value, existing_files, warnings, 0)
-                    for child in children:
-                        child.order = order
-                        nodes.append(child)
+                    section_path = None
+                    remaining = value
+                    if value:
+                        first = value[0]
+                        if isinstance(first, str):
+                            section_path = first
+                            remaining = value[1:]
+                        elif isinstance(first, dict):
+                            for k, v in first.items():
+                                if isinstance(v, str):
+                                    section_path = v
+                                    remaining = value[1:]
+                                    break
+                    children = _parse_mkdocs_items(remaining, existing_files, warnings, 0)
+                    if section_path is not None:
+                        if section_path not in existing_files:
+                            warnings.append(f"File not found: {section_path}")
+                        nodes.append(FileNode(path=section_path, title=title, order=order, children=children))
                         order += 1
+                    else:
+                        for child in children:
+                            child.order = order
+                            nodes.append(child)
+                            order += 1
     return nodes
 
 
@@ -114,38 +133,6 @@ def _parse_docusaurus_items(items: list, existing_files: set[str], warnings: lis
                         order += 1
     return nodes
 
-
-def read_mkdocs_project(directory: str) -> tuple[str, Path]:
-    """Read mkdocs.yml from a MkDocs project root. Returns (nav_yaml_text, docs_dir)."""
-    root = Path(directory).resolve()
-    config_file = root / "mkdocs.yml"
-    if not config_file.exists():
-        raise ValueError(f"mkdocs.yml not found in {directory}")
-    text = config_file.read_text(encoding="utf-8")
-    data = yaml.safe_load(text) or {}
-    docs_subdir = data.get("docs_dir", "docs")
-    docs_dir = root / docs_subdir
-    if not docs_dir.exists():
-        raise ValueError(f"Docs directory '{docs_subdir}' not found in {directory}")
-    return text, docs_dir
-
-
-def read_docusaurus_project(directory: str) -> tuple[str, Path]:
-    """Read sidebars.js/ts from a Docusaurus project root. Returns (sidebar_text, docs_dir)."""
-    root = Path(directory).resolve()
-    sidebar_file = None
-    for name in ("sidebars.js", "sidebars.ts"):
-        candidate = root / name
-        if candidate.exists():
-            sidebar_file = candidate
-            break
-    if sidebar_file is None:
-        raise ValueError(f"sidebars.js or sidebars.ts not found in {directory}")
-    text = sidebar_file.read_text(encoding="utf-8")
-    docs_dir = root / "docs"
-    if not docs_dir.exists():
-        raise ValueError(f"docs/ directory not found in {directory}")
-    return text, docs_dir
 
 
 def export_mkdocs_nav(collection: CollectionStructure) -> str:

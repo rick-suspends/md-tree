@@ -1,0 +1,41 @@
+root:
+- path: file-1.md
+  title: File 1
+  order: 0
+  children: []
+- path: file-2.md
+  title: File 2
+  order: 1
+  children:
+  - path: file-3.md
+    title: File 3
+    order: 0
+    children:
+    - path: file-4.md
+      title: File 4
+      order: 0
+      children: []
+- path: file-5.md
+  title: File 5
+  order: 2
+  children: []
+- path: file-6.md
+  title: File 6
+  order: 3
+  children: []
+- path: file-7.md
+  title: File 7
+  order: 4
+  children:
+  - path: file-8.md
+    title: File 8
+    order: 0
+    children: []
+- path: file-9.md
+  title: File 9
+  order: 5
+  children: []
+- path: file-10.md
+  title: File 10
+  order: 6
+  children: []

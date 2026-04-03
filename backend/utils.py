@@ -11,28 +11,7 @@ PROJECTS_DIR = Path(__file__).parent.parent / "projects"
 
 # ── Per-project path helpers ───────────────────────────────────────────────────
 
-def get_project_config_file(project: str) -> Path:
-    return PROJECTS_DIR / project / "project.yaml"
-
-def load_project_config(project: str) -> dict:
-    f = get_project_config_file(project)
-    if f.exists():
-        try:
-            return yaml.safe_load(f.read_text(encoding="utf-8")) or {}
-        except Exception:
-            pass
-    return {}
-
-def save_project_config(project: str, config: dict):
-    f = get_project_config_file(project)
-    f.parent.mkdir(parents=True, exist_ok=True)
-    with open(f, "w") as fp:
-        yaml.dump(config, fp, allow_unicode=True, sort_keys=False)
-
 def get_markdowns_dir(project: str) -> Path:
-    config = load_project_config(project)
-    if config.get("markdowns_dir"):
-        return Path(config["markdowns_dir"])
     return PROJECTS_DIR / project / "markdowns"
 
 def get_collection_file(project: str) -> Path:
@@ -71,14 +50,11 @@ def list_projects() -> list[dict]:
         result.append({"name": p.name, "title": title})
     return result
 
-def create_project(name: str, markdowns_dir: str | None = None):
+def create_project(name: str):
     """Create a new project directory with empty collection.yaml and project.md."""
     project_dir = PROJECTS_DIR / name
     project_dir.mkdir(parents=True, exist_ok=True)
-    if markdowns_dir:
-        save_project_config(name, {"markdowns_dir": str(Path(markdowns_dir).resolve())})
-    else:
-        (project_dir / "markdowns").mkdir(exist_ok=True)
+    (project_dir / "markdowns").mkdir(exist_ok=True)
     collection_file = project_dir / "collection.yaml"
     if not collection_file.exists():
         with open(collection_file, "w") as f:

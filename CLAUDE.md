@@ -15,7 +15,7 @@ cd backend && source .venv/bin/activate && uvicorn main:app --reload --host 0.0.
 - **Never add comments or docstrings to code that wasn't changed**
 - **Never add features beyond what was asked**
 - **Don't create new files to document changes** — edit existing files or nothing
-- **File paths in the API are always relative to the project's `markdowns_dir`** — never absolute
+- **File paths in the API are always relative to the project's `markdowns/` directory** — never absolute
 - All file path inputs must be validated through `safe_path()` in `main.py` to prevent path traversal
 - Spaces in filenames must be replaced with hyphens — enforced in `handleRenameFile` in `App.tsx`
 
@@ -40,12 +40,19 @@ root:
 - `title` — display name; auto-synced from first `# H1` on save
 - `children` — nested nodes (arbitrary depth)
 
-### `project.yaml` (per-project config)
-Optional file at `projects/{name}/project.yaml`. Currently supports one key:
-- `markdowns_dir` — absolute path to an external markdown directory. If absent, defaults to `projects/{name}/markdowns/`. Set automatically when importing from a MkDocs or Docusaurus project directory. `get_markdowns_dir()` in `utils.py` reads this.
+### Project directory layout
+```
+projects/{name}/
+  collection.yaml       # hierarchy
+  project.md            # project title/notes
+  markdowns/            # all markdown files
+  mkdocs.yml            # optional: drop here before Import > MkDocs
+  sidebars.js           # optional: drop here before Import > Docusaurus
+```
+`markdowns_dir` / `project.yaml` are gone — projects always use their local `markdowns/` folder.
 
 ### Orphans (labeled "Unlinked" in UI)
-Files in the project's `markdowns_dir` not referenced in `collection.yaml`. Shown at the bottom of the sidebar; can be dragged into the hierarchy, double-clicked, or moved with the left-arrow key. All code variables use `orphan*` naming — only the UI label says "Unlinked".
+Files in `markdowns/` not referenced in `collection.yaml`. Shown at the bottom of the sidebar; can be dragged into the hierarchy, double-clicked, or moved with the left-arrow key. All code variables use `orphan*` naming — only the UI label says "Unlinked". The Unlinked button is always visible; triangle is gray when no orphans, orange when there are.
 
 ---
 
@@ -58,12 +65,11 @@ Files in the project's `markdowns_dir` not referenced in `collection.yaml`. Show
 - `handleDragMove` throttled via `prevMoveRef` — only re-renders when `overId` or zone changes, not every pixel
 - Custom collision detection: `deepestPointerCollision` uses `pointerWithin` + smallest-rect preference — fixes 3-level case where parent rect swallows children
 
-**Drop zone logic** (`dragDeltaX` = total horizontal movement from drag start):
-- `> 30px` → **nest** as first child (ghost chip + connector lines at depth+1)
-- `< -30px` → **unnest** to parent level (spacer at parent indentation)
-- otherwise → **sibling** reorder (spacer at same indentation)
+**Drop zone logic** — based on pointer position relative to the target chip, not drag delta:
+- Pointer over **right half** of target chip → **nest** as first child (green border + ghost chip at depth+1)
+- Pointer over **left half** of target chip → **sibling** reorder (spacer at same indentation)
 
-Spacer IS the drop indicator — no colored lines. Ghost chip only shown for nest action.
+`pointerZoneDeltaX()` in Sidebar computes this from `activatorEvent.clientX + delta.x` vs `over.rect` midpoint. Used in both `handleDragMove` (visual feedback) and `handleDragEnd` (actual drop). Spacer IS the drop indicator — no colored lines. Ghost chip only shown for nest action.
 
 **Orphan ordering:** `orphanSort: "recent" | "alpha" | "custom"` in Sidebar; drag-to-reorder OR up/down arrow keys auto-switch to `"custom"`. Resets on project switch.
 
@@ -84,7 +90,7 @@ Spacer IS the drop indicator — no colored lines. Ghost chip only shown for nes
 - **`lineWrapping`** on CodeMirror — prevents horizontal overflow into preview pane
 - **Overlay width**: `1119px` fixed; both editor and preview panes `flex: 0 0 559px`
 - **Rename from editor toolbar**: double-click the filename in the editor top bar triggers inline rename (same `handleRenameFile` as sidebar chips). `onRename` prop not passed to project-md editor (path is fixed).
-- **Import/Export adapters**: `backend/converters.py` has pure functions for MkDocs/Docusaurus ↔ collection.yaml conversion. Category-only nodes (no file) are flattened — children promoted to parent level. Import now accepts a `directory` path — reads `mkdocs.yml` or `sidebars.js` from disk and sets `markdowns_dir` on the project. Export generates config text for clipboard.
+- **Import/Export adapters**: `backend/converters.py` has pure functions for MkDocs/Docusaurus ↔ collection.yaml conversion. Category-only nodes (no file) are flattened — children promoted to parent level. Sections with a page (bare path or `{title: path}` as first child) are imported as proper nested nodes. Import reads config file from `projects/{name}/` root (no dialog for MkDocs; Docusaurus prompts for filename only if `sidebars.js`/`sidebars.ts` not found). Export writes the file to `projects/{name}/` and shows the path — user copies it back to their MkDocs/Docusaurus project.
 - **OrphanPane**: extracted from Sidebar into its own component. Drag-coupled state (`selectedOrphans`, `orphanOrder`, `orphanSort`, refs) stays in Sidebar; file creation and expand/collapse state lives in OrphanPane.
 - **D-pad arrow buttons**: in left 1-inch margin, vertically aligned with orphan pane arrow via runtime `getBoundingClientRect()`. Appears when a hierarchy item is selected. Orphan chips use up/down/left arrow keys — handled via document-level keydown listener in Sidebar.
 - **Mutual deselection**: selecting a hierarchy chip clears orphan selection (`handleHierarchySelect` wraps `onSelect`); selecting an orphan chip clears hierarchy selection via `onSelect(null)` in `handleOrphanSelect`.
@@ -102,7 +108,28 @@ Spacer IS the drop indicator — no colored lines. Ghost chip only shown for nes
 
 ## TODO
 
-1. ~~**Import/Export**~~ — done: MkDocs and Docusaurus import by directory path; export to clipboard
+1. ~~**Import/Export**~~ — done: import reads config from project root; export writes file to project root; MkDocs parser handles proper nesting
 2. ~~**Keyboard-only reorder**~~ — done: left/right nest/unnest, up/down cross-level movement; left-arrow moves orphans to hierarchy
 3. ~~**Search/filter**~~ — dropped; low value for a hierarchy-focused tool
 4. **Documentation project** — self-hosted docs as an mdTree project; users can read it in the app
+
+---
+
+## Version 2.0 Ideas — Full-Featured MD Editor/Viewer/Hierarchy Manager
+
+The current tool leans into hierarchy management. A 2.0 would expand into a full markdown workspace.
+
+**High value:**
+- **Full-text search** — search across all files in the current project
+- **Frontmatter display** — read YAML frontmatter, show tags/metadata in sidebar or panel
+- **Internal link validation** — detect broken `[links](file.md)`, highlight after rename
+- **Mermaid diagram rendering** — in the preview pane; very common in technical docs
+
+**Medium value:**
+- **Whole-collection export to single HTML/PDF** — render full doc set as one document
+- **Word count / reading time** — per file, shown in sidebar chips
+
+**Lower priority:**
+- Dark mode
+- Templates for new files
+- Image management

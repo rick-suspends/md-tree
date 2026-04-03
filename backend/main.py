@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from models import CollectionStructure, FileContent, FileNode, ReorderRequest, ImportRequest
+from models import CollectionStructure, FileContent, FileNode, ReorderRequest, DocusaurusImportRequest
 from utils import (
     PROJECTS_DIR,
     safe_path,
@@ -14,6 +14,7 @@ from utils import (
     get_orphans,
     get_collection_file,
     get_project_md_file,
+    get_markdowns_dir,
     load_collection,
     save_collection,
     sync_collection_with_files,
@@ -22,8 +23,6 @@ from utils import (
     create_project,
     migrate_legacy_data,
     md_to_html,
-    load_project_config,
-    save_project_config,
 )
 
 FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
@@ -54,17 +53,12 @@ def list_projects_endpoint():
 
 
 @app.post("/api/projects/{project_name}")
-def create_project_endpoint(project_name: str, body: Optional[dict] = Body(default=None)):
-    """Create a new project directory, optionally pointing at an external markdowns directory."""
+def create_project_endpoint(project_name: str):
+    """Create a new project directory."""
     project_dir = PROJECTS_DIR / project_name
     if project_dir.exists():
         raise HTTPException(status_code=409, detail="Project already exists")
-    markdowns_dir = (body or {}).get("markdowns_dir")
-    if markdowns_dir:
-        p = Path(markdowns_dir)
-        if not p.exists() or not p.is_dir():
-            raise HTTPException(status_code=400, detail="Directory not found")
-    create_project(project_name, markdowns_dir)
+    create_project(project_name)
     return {"status": "ok", "name": project_name}
 
 
@@ -127,26 +121,6 @@ def save_project_md(project_name: str, body: FileContent):
     path.write_text(body.content, encoding="utf-8")
     return {"status": "ok"}
 
-
-# ── Project config ─────────────────────────────────────────────────────────────
-
-@app.get("/api/projects/{project_name}/config")
-def get_project_config_endpoint(project_name: str):
-    return load_project_config(project_name)
-
-
-@app.put("/api/projects/{project_name}/config")
-def set_project_config_endpoint(project_name: str, body: dict):
-    project_dir = PROJECTS_DIR / project_name
-    if not project_dir.exists():
-        raise HTTPException(status_code=404, detail="Project not found")
-    if "markdowns_dir" in body and body["markdowns_dir"]:
-        p = Path(body["markdowns_dir"])
-        if not p.exists() or not p.is_dir():
-            raise HTTPException(status_code=400, detail="Directory not found")
-        body["markdowns_dir"] = str(p.resolve())
-    save_project_config(project_name, body)
-    return {"status": "ok"}
 
 
 # ── Files ──────────────────────────────────────────────────────────────────────
@@ -310,20 +284,18 @@ def save_collection_yaml(project_name: str, body: dict):
 
 from converters import (
     parse_mkdocs_nav, parse_docusaurus_sidebar, export_mkdocs_nav, export_docusaurus_sidebar,
-    read_mkdocs_project, read_docusaurus_project,
 )
+
+SIDEBAR_DEFAULTS = ("sidebars.js", "sidebars.ts")
 
 
 @app.post("/api/projects/{project_name}/import/mkdocs")
-def import_mkdocs(project_name: str, req: ImportRequest):
-    if req.directory:
-        try:
-            content, docs_dir = read_mkdocs_project(req.directory)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        save_project_config(project_name, {"markdowns_dir": str(docs_dir)})
-    else:
-        content = req.content
+def import_mkdocs(project_name: str):
+    project_dir = PROJECTS_DIR / project_name
+    config_file = project_dir / "mkdocs.yml"
+    if not config_file.exists():
+        raise HTTPException(status_code=404, detail="mkdocs.yml not found in project root")
+    content = config_file.read_text(encoding="utf-8")
     existing = {f["path"] for f in get_all_md_files(project_name)}
     try:
         collection, warnings = parse_mkdocs_nav(content, existing)
@@ -334,15 +306,18 @@ def import_mkdocs(project_name: str, req: ImportRequest):
 
 
 @app.post("/api/projects/{project_name}/import/docusaurus")
-def import_docusaurus(project_name: str, req: ImportRequest):
-    if req.directory:
-        try:
-            content, docs_dir = read_docusaurus_project(req.directory)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        save_project_config(project_name, {"markdowns_dir": str(docs_dir)})
-    else:
-        content = req.content
+def import_docusaurus(project_name: str, req: DocusaurusImportRequest = Body(default=DocusaurusImportRequest())):
+    project_dir = PROJECTS_DIR / project_name
+    sidebar_file = None
+    candidates = [req.filename] if req.filename else list(SIDEBAR_DEFAULTS)
+    for name in candidates:
+        candidate = project_dir / name
+        if candidate.exists():
+            sidebar_file = candidate
+            break
+    if sidebar_file is None:
+        raise HTTPException(status_code=404, detail="sidebar_not_found")
+    content = sidebar_file.read_text(encoding="utf-8")
     existing = {f["path"] for f in get_all_md_files(project_name)}
     try:
         collection, warnings = parse_docusaurus_sidebar(content, existing)
@@ -352,20 +327,32 @@ def import_docusaurus(project_name: str, req: ImportRequest):
     return {"status": "ok", "warnings": warnings, "node_count": len(flatten_collection(collection.root))}
 
 
-@app.get("/api/projects/{project_name}/export/mkdocs")
+@app.post("/api/projects/{project_name}/export/mkdocs")
 def export_mkdocs(project_name: str):
+    project_dir = PROJECTS_DIR / project_name
     collection = load_collection(project_name)
     sync_collection_with_files(project_name, collection)
     content = export_mkdocs_nav(collection)
-    return {"content": content}
+    out_file = project_dir / "mkdocs.yml"
+    out_file.write_text(content, encoding="utf-8")
+    return {
+        "file_path": str(out_file),
+        "markdowns_path": str(get_markdowns_dir(project_name)),
+    }
 
 
-@app.get("/api/projects/{project_name}/export/docusaurus")
+@app.post("/api/projects/{project_name}/export/docusaurus")
 def export_docusaurus(project_name: str):
+    project_dir = PROJECTS_DIR / project_name
     collection = load_collection(project_name)
     sync_collection_with_files(project_name, collection)
     content = export_docusaurus_sidebar(collection)
-    return {"content": content}
+    out_file = project_dir / "sidebars.js"
+    out_file.write_text(content, encoding="utf-8")
+    return {
+        "file_path": str(out_file),
+        "markdowns_path": str(get_markdowns_dir(project_name)),
+    }
 
 
 # ── Serve frontend ─────────────────────────────────────────────────────────────

@@ -23,11 +23,8 @@ export async function renameProject(name: string, newName: string): Promise<{ ne
   return r.json();
 }
 
-export async function createProject(name: string, markdowns_dir?: string): Promise<void> {
-  const r = await fetch(`${BASE}/projects/${name}`, {
-    method: "POST",
-    ...(markdowns_dir ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ markdowns_dir }) } : {}),
-  });
+export async function createProject(name: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${name}`, { method: "POST" });
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
     throw new Error(err.detail ?? "Failed to create project");
@@ -155,11 +152,12 @@ export async function fetchOrphans(project: string): Promise<FileInfo[]> {
   return r.json();
 }
 
-export async function importFromFormat(project: string, format: string, options: { content?: string; directory?: string }): Promise<{ warnings: string[]; node_count: number }> {
+export async function importFromFormat(project: string, format: "mkdocs" | "docusaurus", filename?: string): Promise<{ warnings: string[]; node_count: number }> {
+  const body = format === "docusaurus" && filename ? JSON.stringify({ filename }) : undefined;
   const r = await fetch(`${BASE}/projects/${project}/import/${format}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(options),
+    body,
   });
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
@@ -168,9 +166,8 @@ export async function importFromFormat(project: string, format: string, options:
   return r.json();
 }
 
-export async function exportToFormat(project: string, format: string): Promise<string> {
-  const r = await fetch(`${BASE}/projects/${project}/export/${format}`);
+export async function exportToFormat(project: string, format: "mkdocs" | "docusaurus"): Promise<{ file_path: string; markdowns_path: string }> {
+  const r = await fetch(`${BASE}/projects/${project}/export/${format}`, { method: "POST" });
   if (!r.ok) throw new Error("Export failed");
-  const data = await r.json();
-  return data.content;
+  return r.json();
 }

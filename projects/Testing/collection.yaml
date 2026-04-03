@@ -3,12 +3,12 @@ root:
   title: Introduction
   order: 0
   children: []
-- path: red2.md
-  title: Red2
-  order: 1
-  children: []
 - path: 77.md
   title: '77'
+  order: 1
+  children: []
+- path: 04-epilogue.md
+  title: 04 Epilogue
   order: 2
   children: []
 - path: 02-chapter-one.md
@@ -23,10 +23,6 @@ root:
       title: 05 Fred and more to see if it updates
       order: 0
       children: []
-  - path: 04-epilogue.md
-    title: 04 Epilogue
-    order: 1
-    children: []
 - path: 03-conclusion.md
   title: Conclusion
   order: 4
@@ -35,3 +31,11 @@ root:
     title: 06 Sixth and longer to see if it moves the sidebar width.
     order: 0
     children: []
+  - path: red2.md
+    title: Red2
+    order: 1
+    children: []
+- path: test3.md
+  title: Test3
+  order: 5
+  children: []

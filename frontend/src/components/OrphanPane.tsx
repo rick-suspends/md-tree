@@ -1,4 +1,4 @@
-import { useState, useRef, RefObject, MutableRefObject } from "react";
+import { useState, useEffect, useRef, RefObject, MutableRefObject } from "react";
 import { FileInfo } from "../types";
 import { GAP } from "./SidebarConstants";
 import { OrphanItem } from "./OrphanItem";
@@ -34,7 +34,13 @@ export default function OrphanPane({
   onOpen, onDelete, onAddOrphansToCollection, onRefresh,
   arrowBtnRef,
 }: OrphanPaneProps) {
-  const [orphansExpanded, setOrphansExpanded] = useState(true);
+  const hasOrphans = orphans.length > 0;
+  const [orphansExpanded, setOrphansExpanded] = useState(false);
+  const prevHadOrphans = useRef(false);
+  useEffect(() => {
+    if (hasOrphans && !prevHadOrphans.current) setOrphansExpanded(true);
+    prevHadOrphans.current = hasOrphans;
+  }, [hasOrphans]);
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
   const [createError, setCreateError] = useState("");
@@ -75,7 +81,7 @@ export default function OrphanPane({
             fontSize: "13px", fontWeight: 500, color: "#fff", letterSpacing: "0.3px",
           }}
         >
-          <span style={{ color: "#f90", position: "relative", top: "-1.5px" }}>⚠</span>
+          <span style={{ color: hasOrphans ? "#f90" : "#aaa", position: "relative", top: "-1.5px" }}>⚠</span>
           <span>Unlinked</span>
         </button>
       </div>

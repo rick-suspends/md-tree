@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { FileNode } from "../types";
 import { fetchMarkdown } from "../api";
-import { LINE, COL_W, GAP } from "./SidebarConstants";
+import { LINE, COL_W, CHILD_INDENT, GAP } from "./SidebarConstants";
 
 // ── Inline rename ─────────────────────────────────────────────────────────────
 
@@ -43,25 +43,25 @@ function ConnectorLines({ depth, ancestors, isLast }: { depth: number; ancestors
   return (
     <div style={{ display: "flex", flexShrink: 0, alignSelf: "stretch" }}>
       {ancestors.map((hasMore, i) => (
-        <div key={i} style={{ width: `${COL_W}px`, flexShrink: 0, position: "relative" }}>
+        <div key={i} style={{ width: `${CHILD_INDENT}px`, flexShrink: 0, position: "relative" }}>
           {hasMore && (
             <div style={{
-              position: "absolute", left: `${COL_W / 2}px`,
+              position: "absolute", left: `${CHILD_INDENT / 2}px`,
               top: `-${GAP}px`, bottom: `-${GAP}px`,
               width: 0, borderLeft: `1px solid ${LINE}`,
             }} />
           )}
         </div>
       ))}
-      <div style={{ width: `${COL_W}px`, flexShrink: 0, position: "relative" }}>
+      <div style={{ width: `${CHILD_INDENT}px`, flexShrink: 0, position: "relative" }}>
         <div style={{
-          position: "absolute", left: `${COL_W / 2}px`,
+          position: "absolute", left: `${CHILD_INDENT / 2}px`,
           top: `-${GAP}px`, bottom: isLast ? "50%" : `-${GAP}px`,
           width: 0, borderLeft: `1px solid ${LINE}`,
         }} />
         <div style={{
-          position: "absolute", left: `${COL_W / 2}px`, top: "50%",
-          width: `${COL_W / 2}px`, height: 0, borderTop: `1px solid ${LINE}`,
+          position: "absolute", left: `${CHILD_INDENT / 2}px`, top: "50%",
+          width: `${CHILD_INDENT / 2}px`, height: 0, borderTop: `1px solid ${LINE}`,
         }} />
       </div>
     </div>
@@ -144,7 +144,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
 
   const mi: CSSProperties = { padding: "7px 14px", fontSize: "13px", fontWeight: "normal", cursor: "pointer", color: "#1a1a1a", whiteSpace: "nowrap" };
   // Width of ConnectorLines area for this depth level
-  const connectorWidth = (ancestors.length + 1) * COL_W;
+  const connectorWidth = (ancestors.length + 1) * CHILD_INDENT;
 
   return (
     <div ref={setNodeRef} style={{ transform: (isDragging || depth > 1 || activeId !== null) ? undefined : CSS.Transform.toString(transform), transition: (isDragging || depth > 1 || activeId !== null) ? undefined : transition, margin: `${GAP}px 0` }}>

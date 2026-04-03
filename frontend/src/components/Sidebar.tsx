@@ -344,14 +344,21 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
     prevMoveRef.current = { overId: null, zone: "" };
     cursorOverZoneRef.current = false;
   }
+  function pointerZoneDeltaX(activatorEvent: Event, deltaX: number, overRect: { left: number; width: number } | undefined): number {
+    if (!overRect) return 0;
+    const ptr = activatorEvent as PointerEvent;
+    return (ptr.clientX + deltaX) > (overRect.left + overRect.width / 2) ? 100 : 0;
+  }
+
   function handleDragMove(event: DragMoveEvent) {
     const newOverId = event.over?.id as string ?? null;
-    const newZone = event.delta.x > 30 ? "nest" : event.delta.x < -30 ? "unnest" : "sibling";
+    const dx = pointerZoneDeltaX(event.activatorEvent, event.delta.x, event.over?.rect);
+    const newZone = dx > 30 ? "nest" : "sibling";
     setOverId(newOverId);
     const prev = prevMoveRef.current;
     if (newOverId !== prev.overId || newZone !== prev.zone) {
       prevMoveRef.current = { overId: newOverId, zone: newZone };
-      setDragDeltaX(event.delta.x);
+      setDragDeltaX(dx);
     }
     if (orphanSectionRef.current) {
       const ptr = event.activatorEvent as PointerEvent;
@@ -392,9 +399,10 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
       });
       return;
     }
-    const newNodes = computeNewRoot(dragged, target, delta.x);
+    const effectiveDx = pointerZoneDeltaX(event.activatorEvent, delta.x, over?.rect);
+    const newNodes = computeNewRoot(dragged, target, effectiveDx);
     if (!newNodes) return;
-    if (delta.x > 30) setExpanded(prev => { const s = new Set(prev); s.add(target); return s; });
+    if (effectiveDx > 30) setExpanded(prev => { const s = new Set(prev); s.add(target); return s; });
     onCollectionChange({ root: newNodes });
     if (wasOrphan) setTimeout(() => onRefresh(), 300);
   }
@@ -475,7 +483,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                   node={node}
                   depth={1}
                   isLast={idx === collection.root.length - 1}
-                  ancestors={[false]}
+                  ancestors={[]}
                   showTopIndicator={idx === 0 && activeId !== null && overId === TOP_SENTINEL}
                   selectedPath={selectedPath}
                   titleMode={titleMode}
@@ -501,17 +509,15 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
               )}
             </div>
 
-            {orphans.length > 0 && (
-              <OrphanPane
-                orphans={orphans} titleMode={titleMode} activeId={activeId} currentProject={currentProject}
-                selectedOrphans={selectedOrphans} onOrphanSelect={handleOrphanSelect}
-                onAddToSelection={(path) => setSelectedOrphans(prev => { const next = new Set(prev); next.add(path); return next; })}
-                orphanSort={orphanSort} setOrphanSort={setOrphanSort} orphanOrder={orphanOrder}
-                rubberBand={rubberBand} orphanSectionRef={orphanSectionRef} orphanChipRefs={orphanChipRefs}
-                onOpen={onOpen} onDelete={handleDelete} onAddOrphansToCollection={addOrphansToCollection} onRefresh={onRefresh}
-                arrowBtnRef={orphanArrowRef}
-              />
-            )}
+            <OrphanPane
+              orphans={orphans} titleMode={titleMode} activeId={activeId} currentProject={currentProject}
+              selectedOrphans={selectedOrphans} onOrphanSelect={handleOrphanSelect}
+              onAddToSelection={(path) => setSelectedOrphans(prev => { const next = new Set(prev); next.add(path); return next; })}
+              orphanSort={orphanSort} setOrphanSort={setOrphanSort} orphanOrder={orphanOrder}
+              rubberBand={rubberBand} orphanSectionRef={orphanSectionRef} orphanChipRefs={orphanChipRefs}
+              onOpen={onOpen} onDelete={handleDelete} onAddOrphansToCollection={addOrphansToCollection} onRefresh={onRefresh}
+              arrowBtnRef={orphanArrowRef}
+            />
 
           </div>
         </SortableContext>

@@ -26,6 +26,5 @@ class ReorderRequest(BaseModel):
     collection: CollectionStructure
 
 
-class ImportRequest(BaseModel):
-    content: str = ""
-    directory: Optional[str] = None
+class DocusaurusImportRequest(BaseModel):
+    filename: Optional[str] = None
