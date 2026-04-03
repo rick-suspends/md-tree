@@ -38,6 +38,11 @@ app.add_middleware(
 )
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.on_event("startup")
 def startup():
     PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
