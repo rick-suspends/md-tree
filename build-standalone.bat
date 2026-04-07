@@ -28,9 +28,9 @@ if not exist ".venv" (
 echo.
 echo ==> Running PyInstaller...
 cd "%ROOT%"
-backend\.venv\Scripts\pyinstaller mdtree.spec --distpath standalone\dist --workpath standalone\build --noconfirm
+backend\.venv\Scripts\pyinstaller mdtree.spec --distpath dist --workpath build --noconfirm
 if errorlevel 1 ( echo ERROR: PyInstaller failed. & exit /b 1 )
 
 echo.
-echo ==> Done. Output: standalone\dist\mdtree\
+echo ==> Done. Output: dist\md-tree\
 echo     Run mdtree.exe to launch.

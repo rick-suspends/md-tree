@@ -56,5 +56,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='mdtree',
+    name='md-tree',
 )

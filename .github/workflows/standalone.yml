@@ -12,11 +12,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact: mdtree-windows
+            artifact: md-tree-windows
           - os: ubuntu-22.04
-            artifact: mdtree-linux
+            artifact: md-tree-linux
           - os: macos-latest
-            artifact: mdtree-macos
+            artifact: md-tree-macos
 
     runs-on: ${{ matrix.os }}
 
@@ -46,16 +46,16 @@ jobs:
           pip install pyinstaller pywebview
 
       - name: Build standalone
-        run: pyinstaller mdtree.spec --distpath standalone/dist --workpath standalone/build --noconfirm
+        run: pyinstaller mdtree.spec --distpath dist --workpath build --noconfirm
 
       - name: Zip output (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path standalone/dist/mdtree -DestinationPath ${{ matrix.artifact }}.zip
+        run: Compress-Archive -Path dist/md-tree -DestinationPath ${{ matrix.artifact }}.zip
 
       - name: Zip output (Unix)
         if: runner.os != 'Windows'
-        run: zip -r ${{ matrix.artifact }}.zip standalone/dist/mdtree
+        run: zip -r ${{ matrix.artifact }}.zip dist/md-tree
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -79,6 +79,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            mdtree-windows/mdtree-windows.zip
-            mdtree-linux/mdtree-linux.zip
-            mdtree-macos/mdtree-macos.zip
+            md-tree-windows/md-tree-windows.zip
+            md-tree-linux/md-tree-linux.zip
+            md-tree-macos/md-tree-macos.zip

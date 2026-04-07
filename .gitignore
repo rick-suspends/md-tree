@@ -7,9 +7,6 @@ __pycache__/
 dist/
 build/
 
-# Standalone build output
-standalone/
-
 # Node
 frontend/node_modules/
 frontend/dist/

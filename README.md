@@ -25,11 +25,11 @@ Download the latest standalone app from the [Releases page](https://github.com/r
 
 | Platform | File |
 |----------|------|
-| Windows | `mdtree-windows.zip` |
-| Mac | `mdtree-macos.zip` |
-| Linux | `mdtree-linux.zip` |
+| Windows | `md-tree-windows.zip` |
+| Mac | `md-tree-macos.zip` |
+| Linux | `md-tree-linux.zip` |
 
-Unzip and double-click `mdtree.exe` (Windows) or `mdtree` (Mac/Linux). Your projects are stored in a `projects/` folder created automatically next to the executable.
+Unzip to get an `md-tree/` folder. Open it and double-click `mdtree.exe` (Windows) or `mdtree` (Mac/Linux). Your projects are stored in a `projects/` folder created automatically inside `md-tree/`.
 
 **Mac note:** Right-click → Open the first time to bypass the unsigned app warning.
 

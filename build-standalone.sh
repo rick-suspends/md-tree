@@ -25,8 +25,8 @@ fi
 echo ""
 echo "==> Running PyInstaller..."
 cd "$ROOT"
-backend/.venv/bin/pyinstaller mdtree.spec --distpath standalone/dist --workpath standalone/build --noconfirm
+backend/.venv/bin/pyinstaller mdtree.spec --distpath dist --workpath build --noconfirm
 
 echo ""
-echo "==> Done. Output: standalone/dist/mdtree/"
+echo "==> Done. Output: dist/md-tree/"
 echo "    Run ./mdtree to launch."
