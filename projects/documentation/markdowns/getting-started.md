@@ -1,22 +1,39 @@
 # Getting Started
 
-## Requirements
+.mdTree comes in two versions: a **standalone app** (recommended for most users) and a **web app** (for developers who want to run from source).
 
-Before running .mdTree, install:
+---
 
-- [Python 3.12 or later](https://www.python.org/downloads)
-- [Node.js LTS](https://nodejs.org)
+## Standalone app
 
-The start script handles everything else — Python virtual environment, Python packages, and npm dependencies — automatically on first run.
+No installation required. Everything is bundled in the download.
 
-## Installation
+**1. Download**
 
-Clone the repository and run the start script for your platform.
+Go to the [Releases page](https://github.com/rick-does/md-tree/releases) and download the zip for your platform:
+
+- `mdtree-windows.zip` — Windows
+- `mdtree-macos.zip` — Mac
+- `mdtree-linux.zip` — Linux
+
+**2. Unzip and run**
+
+Unzip to wherever you want to keep the app and your files, then double-click `mdtree.exe` (Windows) or `mdtree` (Mac/Linux).
+
+The app opens in its own window. Your projects are stored in a `projects/` folder created automatically next to the executable.
+
+**Mac note:** The first time you open the app, right-click it and choose **Open** to bypass the unsigned app warning. After that, double-click works normally.
+
+---
+
+## Web app (run from source)
+
+Requires [Python 3.12+](https://www.python.org/downloads) and [Node.js LTS](https://nodejs.org).
 
 **Windows:**
 
 ```bat
-git clone https://github.com/rick-suspends/md-tree.git
+git clone https://github.com/rick-does/md-tree.git
 cd md-tree
 start.bat
 ```
@@ -24,33 +41,19 @@ start.bat
 **Mac / Linux / WSL:**
 
 ```bash
-git clone https://github.com/rick-suspends/md-tree.git
+git clone https://github.com/rick-does/md-tree.git
 cd md-tree
 ./start.sh
 ```
 
-## First run
+On first run the script installs all dependencies and builds the frontend — this takes a minute or two. Subsequent runs start immediately.
 
-On first run the script will:
+Once running, open your browser and go to `http://localhost:8002`.
 
-1. Install npm packages for the frontend
-2. Build the frontend
-3. Create a Python virtual environment
-4. Install Python dependencies
-5. Start the server
+To stop the server, press `Ctrl+C` in the terminal.
 
-This takes a minute or two. Subsequent runs skip the setup steps and start much faster.
+---
 
-## Opening the app
+## First use
 
-Once the server is running, open your browser and go to:
-
-```
-http://localhost:8002
-```
-
-The app opens to the Documentation project by default. After that, it remembers the last project you had open.
-
-## Stopping the server
-
-Press `Ctrl+C` in the terminal window where the start script is running.
+Both versions open to the **Documentation** project by default. After that, the app remembers the last project you had open.
