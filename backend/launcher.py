@@ -2,7 +2,6 @@ import sys
 import shutil
 import threading
 import time
-import webbrowser
 from pathlib import Path
 import uvicorn
 from main import app
@@ -39,7 +38,8 @@ if __name__ == "__main__":
 
     if sys.platform == "linux":
         # pywebview requires system GTK/Qt which can't be bundled on Linux
-        webbrowser.open(f"http://127.0.0.1:{PORT}")
+        print(f"mdTree running at http://127.0.0.1:{PORT}")
+        print("Press Ctrl+C to stop.")
         t.join()  # keep process alive until user Ctrl+C's
     else:
         import webview
