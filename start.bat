@@ -80,5 +80,4 @@ for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":8002 "') do (
     taskkill /f /pid %%a >nul 2>&1
 )
 
-call .venv\Scripts\activate
-uvicorn main:app --reload --host 0.0.0.0 --port 8002
+.venv\Scripts\uvicorn main:app --reload --host 0.0.0.0 --port 8002

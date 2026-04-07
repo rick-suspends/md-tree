@@ -25,7 +25,11 @@ from utils import (
     md_to_html,
 )
 
-FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+import sys as _sys
+if getattr(_sys, "frozen", False):
+    FRONTEND_DIST = Path(_sys._MEIPASS) / "frontend" / "dist"
+else:
+    FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
 
 app = FastAPI(title="Markdown Collection Editor", version="2.0.0")
 

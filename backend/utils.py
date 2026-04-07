@@ -7,7 +7,11 @@ from pathlib import Path
 from typing import Optional
 from models import FileNode, CollectionStructure
 
-PROJECTS_DIR = Path(__file__).parent.parent / "projects"
+import sys as _sys
+if getattr(_sys, "frozen", False):
+    PROJECTS_DIR = Path(_sys.executable).parent / "projects"
+else:
+    PROJECTS_DIR = Path(__file__).parent.parent / "projects"
 
 # ── Per-project path helpers ───────────────────────────────────────────────────
 
