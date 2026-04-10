@@ -23,7 +23,7 @@ cd backend && source .venv/bin/activate && uvicorn main:app --reload --host 0.0.
 
 ## Data Model
 
-### `collection.yaml`
+### `tree.yaml`
 ```yaml
 root:
   - path: intro.md
@@ -43,7 +43,7 @@ root:
 ### Project directory layout
 ```
 projects/{name}/
-  collection.yaml       # hierarchy
+  tree.yaml       # hierarchy
   project.md            # project title/notes
   markdowns/            # all markdown files
   mkdocs.yml            # optional: drop here before Import > MkDocs
@@ -52,10 +52,10 @@ projects/{name}/
 `markdowns_dir` / `project.yaml` are gone — projects always use their local `markdowns/` folder.
 
 ### Orphans (labeled "Unlinked" in UI)
-Files in `markdowns/` not referenced in `collection.yaml`. Shown in the orphan pane; can be dragged into the hierarchy, double-clicked, or moved with the left-arrow key. All code variables use `orphan*` naming — only the UI label says "Unlinked". The Unlinked chip is always visible; triangle is gray when no orphans, orange when there are.
+Files in `markdowns/` not referenced in `tree.yaml`. Shown in the orphan pane; can be dragged into the hierarchy, double-clicked, or moved with the left-arrow key. All code variables use `orphan*` naming — only the UI label says "Unlinked". The Unlinked chip is always visible; triangle is gray when no orphans, orange when there are.
 
 ### File archive
-"Delete" from any file chip three-dot menu archives rather than truly deletes. Backend endpoint `POST /api/projects/{name}/archive-markdown/{file_path:path}` moves the file to `markdowns/_archive/` (timestamp suffix on name collision) and removes it from `collection.yaml`. `get_all_md_files` in `utils.py` skips any path under `_archive/`. No confirm dialog — archives immediately, shows `"${path}" is now archived` alert after.
+"Delete" from any file chip three-dot menu archives rather than truly deletes. Backend endpoint `POST /api/projects/{name}/archive-markdown/{file_path:path}` moves the file to `markdowns/_archive/` (timestamp suffix on name collision) and removes it from `tree.yaml`. `get_all_md_files` in `utils.py` skips any path under `_archive/`. No confirm dialog — archives immediately, shows `"${path}" is now archived` alert after.
 
 ---
 
@@ -93,7 +93,7 @@ Files in `markdowns/` not referenced in `collection.yaml`. Shown in the orphan p
 - **`lineWrapping`** on CodeMirror — prevents horizontal overflow into preview pane
 - **Overlay width**: `1119px` fixed; both editor and preview panes `flex: 0 0 559px`
 - **Rename from editor toolbar**: double-click the filename in the editor top bar triggers inline rename (same `handleRenameFile` as sidebar chips). `onRename` prop not passed to project-md editor (path is fixed).
-- **Import/Export adapters**: `backend/converters.py` has pure functions for MkDocs/Docusaurus ↔ collection.yaml conversion. Category-only nodes (no file) are flattened — children promoted to parent level. Sections with a page (bare path or `{title: path}` as first child) are imported as proper nested nodes. Import reads config file from `projects/{name}/` root (no dialog for MkDocs; Docusaurus prompts for filename only if `sidebars.js`/`sidebars.ts` not found). Export writes the file to `projects/{name}/` and shows the path — user copies it back to their MkDocs/Docusaurus project.
+- **Import/Export adapters**: `backend/converters.py` has pure functions for MkDocs/Docusaurus ↔ tree.yaml conversion. Category-only nodes (no file) are flattened — children promoted to parent level. Sections with a page (bare path or `{title: path}` as first child) are imported as proper nested nodes. Import reads config file from `projects/{name}/` root (no dialog for MkDocs; Docusaurus prompts for filename only if `sidebars.js`/`sidebars.ts` not found). Export writes the file to `projects/{name}/` and shows the path — user copies it back to their MkDocs/Docusaurus project.
 - **OrphanPane**: extracted from Sidebar into its own component. Drag-coupled state (`selectedOrphans`, `orphanOrder`, `orphanSort`, refs) stays in Sidebar; file creation and expand/collapse state lives in OrphanPane.
 - **D-pad arrow buttons**: in left 1-inch margin, vertically aligned with orphan pane arrow via runtime `getBoundingClientRect()`. Appears when a hierarchy item is selected. Orphan chips use up/down/left arrow keys — handled via document-level keydown listener in Sidebar.
 - **Mutual deselection**: selecting a hierarchy chip clears orphan selection (`handleHierarchySelect` wraps `onSelect`); selecting an orphan chip clears hierarchy selection via `onSelect(null)` in `handleOrphanSelect`.
@@ -154,7 +154,7 @@ Files in `markdowns/` not referenced in `collection.yaml`. Shown in the orphan p
 
 ## Strategic Notes
 
-- The web app will be retired once the standalone executable and Docusaurus plugin are shipped
+- The web app is kept — required for the Lightsail demo and for SSH/headless Linux use
 - 2.0 features are deferred until portfolio breadth is established — the tree editing feature is the differentiator, not a full MD editor
 - See `rick-does/portfolio` for overall portfolio strategy and priorities
 
